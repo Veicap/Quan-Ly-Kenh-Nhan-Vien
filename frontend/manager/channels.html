@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kênh YouTube - Quản Lý Kênh Nhân Sự</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .channel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      backdrop-filter: blur(12px);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .channel-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+    }
+    .channel-card:hover {
+      border-color: rgba(79,142,247,0.3);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    .channel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+    }
+    .channel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .channel-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+    .channel-gmail { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+    .channel-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .channel-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .channel-meta-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.8rem; color: var(--text-secondary);
+    }
+    .channel-meta-row .label { color: var(--text-muted); min-width: 80px; }
+    .channel-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      gap: 8px;
+    }
+    .storage-path {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      background: var(--bg-glass);
+      border-radius: var(--radius-sm);
+      padding: 4px 8px;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🎬</div>
+      <h2>Quản Lý Kênh</h2>
+      <p>Hệ thống nhân sự YouTube</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Tổng Quan</div>
+      <a href="/manager/dashboard.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+      <div class="nav-section-label">Quản Lý</div>
+      <a href="/manager/gmails.html" class="nav-item"><span class="nav-icon">📧</span> Gmail Accounts</a>
+      <a href="/manager/channels.html" class="nav-item active"><span class="nav-icon">📺</span> Kênh YouTube</a>
+      <a href="/manager/employees.html" class="nav-item"><span class="nav-icon">👥</span> Nhân Viên</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="avatar" id="sidebar-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-user-name">Admin</div>
+          <div class="user-role" id="sidebar-user-role">👔 Quản Lý</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="logout()">🚪 Đăng Xuất</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="page-header">
+      <h1>📺 Kênh YouTube</h1>
+      <button class="btn btn-secondary" onclick="openNotifModal()">🔔 Thông Báo <span id="notif-count" class="badge badge-danger" style="display:none">0</span></button>
+    </header>
+    <div class="page-body">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Tìm kênh..." oninput="filterChannels()">
+        </div>
+        <select id="filter-gmail" class="form-control" style="width:auto;min-width:180px" onchange="filterChannels()">
+          <option value="">Tất cả Gmail</option>
+        </select>
+        <select id="filter-emp" class="form-control" style="width:auto;min-width:180px" onchange="filterChannels()">
+          <option value="">Tất cả nhân viên</option>
+          <option value="unassigned">Chưa phân công</option>
+        </select>
+        <span id="total-count" class="badge badge-blue">0 kênh</span>
+      </div>
+
+      <div class="channel-grid" id="channel-grid">
+        <div class="loading-overlay" style="grid-column:1/-1"><div class="spinner"></div> Đang tải...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notification Modal -->
+<div class="modal-overlay" id="modal-notif">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title">🔔 Thông Báo Hệ Thống</div>
+      <button class="modal-close" onclick="closeModal('modal-notif')">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="notif-list" style="max-height:440px;overflow-y:auto">
+      <div class="loading-overlay"><div class="spinner"></div> Đang tải...</div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-secondary btn-sm" onclick="markAllRead()">Đánh dấu đã đọc tất cả</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-notif')">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Approve Delete Modal -->
+<div class="modal-overlay" id="modal-approve-delete">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header" style="background:linear-gradient(135deg,rgba(220,38,38,0.15),rgba(185,28,28,0.1));border-bottom:1px solid rgba(220,38,38,0.3)">
+      <div class="modal-title" style="color:#f87171">🗑️ Duyệt Xóa Kênh</div>
+      <button class="modal-close" onclick="closeModal('modal-approve-delete')">&#x2715;</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:20px 16px">
+      <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+      <div id="approve-channel-name" style="font-size:0.9rem;color:var(--primary);font-weight:700;margin-bottom:12px"></div>
+      <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6">
+        Xác nhận <strong style="color:#f87171">XÓA VĨNH VIỄN</strong> kênh này?<br>
+        Không thể khôi phục sau khi xóa!
+      </p>
+    </div>
+    <div class="modal-footer" style="justify-content:center;gap:12px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-approve-delete')" style="min-width:90px">Hủy</button>
+      <button class="btn btn-danger" id="btn-approve-ok" onclick="doApproveDelete()" style="min-width:130px">✅ Xác Nhận Xóa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Reject Delete Modal -->
+<div class="modal-overlay" id="modal-reject-delete">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">❌ Từ Chối Xóa Kênh</div>
+      <button class="modal-close" onclick="closeModal('modal-reject-delete')">&#x2715;</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:20px 16px">
+      <div style="font-size:48px;margin-bottom:12px">🔄</div>
+      <div id="reject-channel-name" style="font-size:0.9rem;color:var(--primary);font-weight:700;margin-bottom:12px"></div>
+      <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6">
+        Từ chối yêu cầu xóa và khôi phục kênh này?<br>
+        Kênh sẽ trở lại trạng thái bình thường.
+      </p>
+    </div>
+    <div class="modal-footer" style="justify-content:center;gap:12px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-reject-delete')" style="min-width:90px">Hủy</button>
+      <button class="btn btn-primary" id="btn-reject-ok" onclick="doRejectDelete()" style="min-width:130px">❌ Từ Chối Xóa</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="/js/api.js"></script>
+<script>
+  if (!requireLogin('manager')) {}
+  renderUserInfo();
+
+  let allChannels = [], allGmails = [], allEmployees = [];
+  let deleteId = null;
+
+  async function loadData() {
+    try {
+      [allChannels, allGmails, allEmployees] = await Promise.all([
+        apiGet('/channels'),
+        apiGet('/gmails'),
+        apiGet('/auth/users')
+      ]);
+      allEmployees = allEmployees.filter(u => u.role === 'employee');
+      populateFilters();
+      renderChannels(allChannels);
+      loadNotifications();
+      // Poll mỗi 10 giây - khi phát hiện notification mới sẽ tự reload kênh
+      setInterval(checkNotifications, 10000);
+    } catch (err) {
+      showToast('Lỗi tải dữ liệu: ' + err.message, 'error');
+    }
+  }
+
+  let lastUnreadCount = 0;
+  async function checkNotifications() {
+    try {
+      const notifs = await apiGet('/notifications');
+      const unreadCount = notifs.filter(n => !n.is_read).length;
+      allNotifs = notifs;
+      updateNotifBadge(unreadCount);
+
+      // Nếu có notification mới → reload lại danh sách kênh (để hiển thị nút Duyệt Xóa)
+      if (unreadCount > lastUnreadCount) {
+        showToast('🔔 Có thông báo mới từ nhân viên!', 'info', 5000);
+        // Reload channels to show pending_deletion status + approve/reject buttons
+        allChannels = await apiGet('/channels');
+        filterChannels();
+      }
+      lastUnreadCount = unreadCount;
+    } catch (e) {
+      console.error('Lỗi kiểm tra thông báo', e);
+    }
+  }
+
+  function updateNotifBadge(unreadCount) {
+    const countEl = document.getElementById('notif-count');
+    if (unreadCount > 0) {
+      countEl.textContent = unreadCount;
+      countEl.style.display = 'inline-block';
+    } else {
+      countEl.style.display = 'none';
+    }
+  }
+
+  function populateFilters() {
+    const gmailSel = document.getElementById('filter-gmail');
+    const empSel = document.getElementById('filter-emp');
+    gmailSel.innerHTML = '<option value="">Tất cả Gmail</option>' +
+      allGmails.map(g => `<option value="${g.id}">${escapeHtml(g.email)}</option>`).join('');
+    empSel.innerHTML = '<option value="">Tất cả nhân viên</option><option value="unassigned">Chưa phân công</option>' +
+      allEmployees.map(e => `<option value="${e.id}">${escapeHtml(e.full_name)}</option>`).join('');
+  }
+
+  function filterChannels() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const gmailF = document.getElementById('filter-gmail').value;
+    const empF = document.getElementById('filter-emp').value;
+    let filtered = allChannels.filter(c => {
+      const matchQ = c.channel_name.toLowerCase().includes(q) || (c.gmail_email||'').toLowerCase().includes(q);
+      const matchGmail = !gmailF || String(c.gmail_id) === gmailF;
+      const matchEmp = !empF || (empF === 'unassigned' ? !c.employee_id : String(c.employee_id) === empF);
+      return matchQ && matchGmail && matchEmp;
+    });
+    renderChannels(filtered);
+  }
+
+  function renderChannels(data) {
+    document.getElementById('total-count').textContent = `${data.length} kênh`;
+    const grid = document.getElementById('channel-grid');
+    if (data.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-icon">📺</div>
+        <h3>Chưa có kênh nào</h3>
+        <p>Nhấn "Thêm Kênh" để bắt đầu</p>
+      </div>`;
+      return;
+    }
+    grid.innerHTML = data.map(c => `
+      <div class="channel-card">
+        <div class="channel-header">
+          <div>
+            <div class="channel-name">📺 ${escapeHtml(c.channel_name)}</div>
+            <div class="channel-gmail">📧 ${escapeHtml(c.gmail_email)}</div>
+          </div>
+          <div class="channel-actions">
+            ${c.status === 'pending_deletion' ? 
+              `<button class="btn btn-danger btn-sm" onclick="approveDelete(${c.id})">Duyệt Xóa</button>
+               <button class="btn btn-secondary btn-sm" onclick="rejectDelete(${c.id})">Từ Chối</button>`
+              : ''}
+          </div>
+        </div>
+        ${c.status === 'pending_deletion' ? '<div style="background:var(--danger);color:white;padding:4px 8px;font-size:0.8rem;text-align:center;font-weight:bold;">⚠️ Đang chờ duyệt xóa</div>' : ''}
+        <div class="channel-meta" style="margin-top:12px">
+          <div class="channel-meta-row">
+            <span class="label">👤 Nhân viên:</span>
+            ${c.employee_name
+              ? `<span class="badge badge-green">${escapeHtml(c.employee_name)}</span>`
+              : `<span class="badge badge-gray">Chưa phân công</span>`}
+          </div>
+          <div class="channel-meta-row">
+            <span class="label">🎬 Video:</span>
+            <span class="badge badge-blue">${c.video_count} video</span>
+            <span style="color:var(--text-muted);font-size:0.78rem;margin-left:4px">STT tiếp: #${c.next_video_number}</span>
+          </div>
+          <div class="channel-meta-row">
+            <span class="label">🔗 Link kênh:</span>
+            ${c.channel_url
+              ? `<a href="${escapeHtml(c.channel_url)}" target="_blank" style="color:var(--primary);font-size:0.82rem;word-break:break-all;">${escapeHtml(c.channel_url)}</a>`
+              : `<span style="color:var(--text-muted);font-size:0.82rem">Chưa có link</span>`}
+          </div>
+        </div>
+        <div class="channel-footer">
+          <span class="storage-path" title="${escapeHtml(c.video_storage_path)}">
+            ${c.video_storage_path ? '📁 ' + escapeHtml(c.video_storage_path) : '<span style="color:var(--text-muted)">Chưa có đường dẫn kho video</span>'}
+          </span>
+          <button class="btn btn-secondary btn-sm" onclick="openStudio(${c.id})" id="open-studio-${c.id}">▶ Studio</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // --- NOTIFICATIONS & APPROVALS ---
+  let allNotifs = [];
+  async function loadNotifications() {
+    try {
+      allNotifs = await apiGet('/notifications');
+      const unreadCount = allNotifs.filter(n => !n.is_read).length;
+      updateNotifBadge(unreadCount);
+      lastUnreadCount = unreadCount;
+      renderNotifications();
+    } catch (e) {
+      console.error('Lỗi tải thông báo', e);
+    }
+  }
+
+  function renderNotifications() {
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    if (allNotifs.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">Không có thông báo nào.</div>';
+      return;
+    }
+    list.innerHTML = allNotifs.map(n => `
+      <div style="padding:12px;border-bottom:1px solid var(--border);${n.is_read ? 'opacity:0.5' : 'background:rgba(79,142,247,0.07);border-left:3px solid var(--primary)'}">
+        <div style="font-size:0.85rem;margin-bottom:6px;color:var(--text-primary);font-weight:${n.is_read ? 'normal' : '600'}">
+          ${n.type === 'delete_request' ? '🔴' : '🟢'} ${escapeHtml(n.message)}
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="font-size:0.75rem;color:var(--text-muted)">${formatDate(n.created_at)}</div>
+          ${n.type === 'delete_request' && n.related_channel_id && !n.is_read ? `
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-danger btn-sm" style="font-size:0.75rem;padding:3px 10px" onclick="approveDeleteFromNotif(${n.related_channel_id}, ${n.id})">✅ Duyệt Xóa</button>
+              <button class="btn btn-secondary btn-sm" style="font-size:0.75rem;padding:3px 10px" onclick="rejectDeleteFromNotif(${n.related_channel_id}, ${n.id})">❌ Từ Chối</button>
+            </div>
+          ` : (n.type === 'delete_request' && n.is_read ? `<span style="font-size:0.75rem;color:var(--text-muted)">✓ Đã xử lý</span>` : '')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openNotifModal() {
+    openModal('modal-notif');
+    // Reload notifications + channels khi mở modal để đảm bảo data mới nhất
+    loadNotifications().then(() => {
+      apiGet('/channels').then(channels => {
+        allChannels = channels;
+        filterChannels();
+      });
+    });
+  }
+
+  async function markAllRead() {
+    try {
+      await apiPost('/notifications/read-all', {});
+      lastUnreadCount = 0;
+      loadNotifications();
+    } catch (e) {
+      showToast('Lỗi: ' + e.message, 'error');
+    }
+  }
+
+  // Pending channel ID + notif ID for modal confirmation
+  let _pendingApproveCid = null, _pendingRejectCid = null;
+
+  // Mở modal duyệt xóa
+  function approveDeleteFromNotif(cid, notifId) {
+    _pendingApproveCid = cid;
+    const ch = allChannels.find(c => c.id === cid);
+    document.getElementById('approve-channel-name').textContent = ch ? `"📺 ${ch.channel_name}"` : `Kênh #${cid}`;
+    openModal('modal-approve-delete');
+  }
+
+  // Thực hiện duyệt xóa
+  async function doApproveDelete() {
+    if (!_pendingApproveCid) return;
+    const btn = document.getElementById('btn-approve-ok');
+    btn.disabled = true; btn.textContent = '⏳ Đang xử lý...';
+    try {
+      await apiPost(`/channels/${_pendingApproveCid}/approve-delete`, {});
+      closeModal('modal-approve-delete');
+      showToast('✅ Đã duyệt và xóa kênh!', 'success', 5000);
+      allChannels = await apiGet('/channels');
+      filterChannels();
+      await loadNotifications();
+    } catch (e) {
+      closeModal('modal-approve-delete');
+      showToast('Lỗi: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '✅ Xác Nhận Xóa';
+      _pendingApproveCid = null;
+    }
+  }
+
+  // Mở modal từ chối xóa
+  function rejectDeleteFromNotif(cid, notifId) {
+    _pendingRejectCid = cid;
+    const ch = allChannels.find(c => c.id === cid);
+    document.getElementById('reject-channel-name').textContent = ch ? `"📺 ${ch.channel_name}"` : `Kênh #${cid}`;
+    openModal('modal-reject-delete');
+  }
+
+  // Thực hiện từ chối
+  async function doRejectDelete() {
+    if (!_pendingRejectCid) return;
+    const btn = document.getElementById('btn-reject-ok');
+    btn.disabled = true; btn.textContent = '⏳ Đang xử lý...';
+    try {
+      await apiPost(`/channels/${_pendingRejectCid}/reject-delete`, {});
+      closeModal('modal-reject-delete');
+      showToast('❌ Đã từ chối xóa kênh. Kênh được khôi phục.', 'success', 5000);
+      allChannels = await apiGet('/channels');
+      filterChannels();
+      await loadNotifications();
+    } catch (e) {
+      closeModal('modal-reject-delete');
+      showToast('Lỗi: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '❌ Từ Chối Xóa';
+      _pendingRejectCid = null;
+    }
+  }
+
+  async function approveDelete(cid) {
+    if(!confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN kênh này?')) return;
+    try {
+      await apiPost(`/channels/${cid}/approve-delete`, {});
+      showToast('Đã xóa kênh!', 'success');
+      loadData();
+    } catch (e) {
+      showToast('Lỗi: ' + e.message, 'error');
+    }
+  }
+
+  async function rejectDelete(cid) {
+    try {
+      await apiPost(`/channels/${cid}/reject-delete`, {});
+      showToast('Đã từ chối xóa kênh.', 'success');
+      loadData();
+    } catch (e) {
+      showToast('Lỗi: ' + e.message, 'error');
+    }
+  }
+
+  async function openStudio(channelId) {
+    const btn = document.getElementById(`open-studio-${channelId}`);
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang mở...'; }
+    try {
+      const result = await apiPost(`/channels/${channelId}/open-studio`, {});
+      showToast(result.message || 'Đã mở YouTube Studio!', 'success');
+    } catch (err) {
+      showToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '▶ Studio'; }
+    }
+  }
+
+  loadData();
+
+</script>
+</body>
+</html>

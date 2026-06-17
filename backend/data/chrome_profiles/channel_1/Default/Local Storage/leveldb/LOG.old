@@ -1,0 +1,14 @@
+2026/06/17-06:57:07.622 5938 Reusing MANIFEST C:\Users\admin\Desktop\Quan Ly Kenh Nhan Su\backend\data\chrome_profiles\channel_1\Default\Local Storage\leveldb/MANIFEST-000001
+2026/06/17-06:57:07.624 5938 Recovering log #23
+2026/06/17-06:57:07.625 5938 Level-0 table #25: started
+2026/06/17-06:57:07.630 5938 Level-0 table #25: 16619 bytes OK
+2026/06/17-06:57:07.634 5938 Delete type=0 #23
+2026/06/17-06:57:07.634 3708 Compacting 4@0 + 1@1 files
+2026/06/17-06:57:07.638 3708 Generated table #27@0: 20 keys, 9181 bytes
+2026/06/17-06:57:07.639 3708 Compacted 4@0 + 1@1 files => 9181 bytes
+2026/06/17-06:57:07.641 3708 compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/06/17-06:57:07.641 3708 Delete type=2 #14
+2026/06/17-06:57:07.641 3708 Delete type=2 #16
+2026/06/17-06:57:07.641 3708 Delete type=2 #19
+2026/06/17-06:57:07.641 3708 Delete type=2 #22
+2026/06/17-06:57:07.641 3708 Delete type=2 #25

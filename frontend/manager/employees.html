@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nhân Viên - Quản Lý Kênh Nhân Sự</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🎬</div>
+      <h2>Quản Lý Kênh</h2>
+      <p>Hệ thống nhân sự YouTube</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Tổng Quan</div>
+      <a href="/manager/dashboard.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+      <div class="nav-section-label">Quản Lý</div>
+      <a href="/manager/gmails.html" class="nav-item"><span class="nav-icon">📧</span> Gmail Accounts</a>
+      <a href="/manager/channels.html" class="nav-item"><span class="nav-icon">📺</span> Kênh YouTube</a>
+      <a href="/manager/employees.html" class="nav-item active"><span class="nav-icon">👥</span> Nhân Viên</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="avatar" id="sidebar-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-user-name">Admin</div>
+          <div class="user-role" id="sidebar-user-role">👔 Quản Lý</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="logout()">🚪 Đăng Xuất</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="page-header">
+      <h1>👥 Quản Lý Nhân Viên</h1>
+      <button class="btn btn-primary" onclick="openAddModal()">➕ Thêm Nhân Viên</button>
+    </header>
+    <div class="page-body">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Tìm nhân viên..." oninput="filterTable()">
+        </div>
+        <span id="total-count" class="badge badge-blue">0 nhân viên</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tên Đầy Đủ</th>
+              <th>Username</th>
+              <th>Vai Trò</th>
+              <th>Trạng Thái</th>
+              <th>Số Kênh Phụ Trách</th>
+              <th>Ngày Tạo</th>
+              <th>Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="user-table-body">
+            <tr><td colspan="8"><div class="loading-overlay"><div class="spinner"></div> Đang tải...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-user-title">➕ Thêm Nhân Viên</div>
+      <button class="modal-close" onclick="closeModal('modal-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-uid">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tên Đầy Đủ *</label>
+          <input type="text" id="f-fullname" class="form-control" placeholder="VD: Nguyễn Văn A">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Username *</label>
+          <input type="text" id="f-username" class="form-control" placeholder="VD: nguyenvana">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Mật Khẩu</label>
+          <input type="text" id="f-password" class="form-control" placeholder="Tối thiểu 6 ký tự">
+          <small id="pwd-hint" style="color:var(--text-muted);font-size:0.75rem"></small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vai Trò</label>
+          <select id="f-role" class="form-control">
+            <option value="employee">👷 Nhân Viên</option>
+            <option value="manager">👔 Quản Lý</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-user')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveUser()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title">🗑 Xác Nhận Xóa</div>
+      <button class="modal-close" onclick="closeModal('modal-delete')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary)">Xóa tài khoản <strong id="del-uname" style="color:var(--danger)"></strong>?</p>
+      <p style="color:var(--text-muted);font-size:0.8rem;margin-top:8px">Các kênh đang phân công cho nhân viên này sẽ trở thành "Chưa phân công".</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-delete')">Hủy</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">🗑 Xóa</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="/js/api.js"></script>
+<script>
+  if (!requireLogin('manager')) {}
+  renderUserInfo();
+
+  let allUsers = [], allChannels = [], deleteId = null;
+
+  async function loadData() {
+    try {
+      [allUsers, allChannels] = await Promise.all([
+        apiGet('/auth/users'),
+        apiGet('/channels')
+      ]);
+      renderTable(allUsers);
+    } catch (err) {
+      showToast('Lỗi: ' + err.message, 'error');
+    }
+  }
+
+  function getChannelCount(userId) {
+    return allChannels.filter(c => c.employee_id === userId).length;
+  }
+
+  function renderTable(data) {
+    document.getElementById('total-count').textContent = `${data.length} tài khoản`;
+    const tbody = document.getElementById('user-table-body');
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">👥</div><h3>Chưa có nhân viên</h3></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map((u, i) => `
+      <tr>
+        <td style="color:var(--text-muted)">${i+1}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="avatar" style="width:32px;height:32px;font-size:12px">${(u.full_name||u.username)[0].toUpperCase()}</div>
+            <strong>${escapeHtml(u.full_name)}</strong>
+          </div>
+        </td>
+        <td style="color:var(--text-muted)">@${escapeHtml(u.username)}</td>
+        <td>
+          ${u.role === 'manager'
+            ? '<span class="badge badge-purple">👔 Quản Lý</span>'
+            : '<span class="badge badge-blue">👷 Nhân Viên</span>'}
+        </td>
+        <td>
+          ${u.is_active
+            ? '<span class="badge badge-green">✅ Hoạt động</span>'
+            : '<span class="badge badge-red">❌ Vô hiệu</span>'}
+        </td>
+        <td>
+          <span class="badge badge-blue">📺 ${getChannelCount(u.id)} kênh</span>
+        </td>
+        <td style="color:var(--text-muted);font-size:0.8rem">${formatDate(u.created_at)}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="openEditModal(${u.id})" title="Sửa">✏️</button>
+            <button class="btn btn-${u.is_active ? 'warning' : 'success'} btn-sm btn-icon" onclick="toggleActive(${u.id}, ${u.is_active})" title="${u.is_active ? 'Vô hiệu hóa' : 'Kích hoạt'}">
+              ${u.is_active ? '🔒' : '🔓'}
+            </button>
+            ${u.username !== 'admin' ? `<button class="btn btn-danger btn-sm btn-icon" onclick="openDeleteModal(${u.id}, '${escapeHtml(u.full_name)}')" title="Xóa">🗑</button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function filterTable() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    renderTable(allUsers.filter(u =>
+      u.full_name.toLowerCase().includes(q) ||
+      u.username.toLowerCase().includes(q)
+    ));
+  }
+
+  function openAddModal() {
+    document.getElementById('modal-user-title').textContent = '➕ Thêm Tài Khoản';
+    document.getElementById('edit-uid').value = '';
+    document.getElementById('f-fullname').value = '';
+    document.getElementById('f-username').value = '';
+    document.getElementById('f-password').value = '';
+    document.getElementById('f-username').disabled = false;
+    document.getElementById('pwd-hint').textContent = '';
+    document.getElementById('f-role').value = 'employee';
+    openModal('modal-user');
+  }
+
+  function openEditModal(id) {
+    const u = allUsers.find(x => x.id === id);
+    if (!u) return;
+    document.getElementById('modal-user-title').textContent = '✏️ Sửa Tài Khoản';
+    document.getElementById('edit-uid').value = u.id;
+    document.getElementById('f-fullname').value = u.full_name;
+    document.getElementById('f-username').value = u.username;
+    document.getElementById('f-username').disabled = true;
+    document.getElementById('f-password').value = '';
+    document.getElementById('pwd-hint').textContent = 'Để trống nếu không muốn đổi mật khẩu';
+    document.getElementById('f-role').value = u.role;
+    openModal('modal-user');
+  }
+
+  function openDeleteModal(id, name) {
+    deleteId = id;
+    document.getElementById('del-uname').textContent = name;
+    openModal('modal-delete');
+  }
+
+  async function saveUser() {
+    const id = document.getElementById('edit-uid').value;
+    const full_name = document.getElementById('f-fullname').value.trim();
+    const username = document.getElementById('f-username').value.trim();
+    const password = document.getElementById('f-password').value;
+    const role = document.getElementById('f-role').value;
+
+    if (!full_name || (!id && !username)) {
+      showToast('Vui lòng nhập đầy đủ thông tin', 'error'); return;
+    }
+    if (!id && (!password || password.length < 6)) {
+      showToast('Mật khẩu tối thiểu 6 ký tự', 'error'); return;
+    }
+
+    const payload = { full_name, role };
+    if (password) payload.password = password;
+    if (!id) payload.username = username;
+
+    try {
+      if (id) {
+        await apiPut(`/auth/users/${id}`, payload);
+        showToast('Đã cập nhật tài khoản!', 'success');
+      } else {
+        await apiPost('/auth/users', { ...payload, username });
+        showToast('Đã tạo tài khoản mới!', 'success');
+      }
+      closeModal('modal-user');
+      loadData();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function toggleActive(id, currentActive) {
+    try {
+      await apiPut(`/auth/users/${id}`, { is_active: !currentActive });
+      showToast(currentActive ? 'Đã vô hiệu hóa tài khoản' : 'Đã kích hoạt tài khoản', 'success');
+      loadData();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return;
+    try {
+      await apiDelete(`/auth/users/${deleteId}`);
+      showToast('Đã xóa tài khoản!', 'success');
+      closeModal('modal-delete');
+      loadData();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  loadData();
+</script>
+</body>
+</html>

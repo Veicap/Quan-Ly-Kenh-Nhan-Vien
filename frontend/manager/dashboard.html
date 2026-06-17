@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Quản Lý Kênh Nhân Sự</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .recent-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 900px) { .recent-grid { grid-template-columns: 1fr; } }
+
+    .chart-bar-wrap { margin-top: 8px; }
+    .chart-bar-item { margin-bottom: 12px; }
+    .chart-bar-label {
+      display: flex; justify-content: space-between;
+      font-size: 0.82rem; color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+    .chart-bar-track {
+      height: 8px; background: var(--bg-glass);
+      border-radius: 4px; overflow: hidden;
+    }
+    .chart-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      border-radius: 4px;
+      transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .video-list-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .video-list-item:last-child { border-bottom: none; }
+    .video-num {
+      width: 32px; height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-glow);
+      color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .video-info .video-title {
+      font-size: 0.85rem; font-weight: 600; color: var(--text-primary);
+    }
+    .video-info .video-meta {
+      font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;
+    }
+    .video-info .video-meta a {
+      color: var(--primary); text-decoration: none;
+    }
+    .video-info .video-meta a:hover { text-decoration: underline; }
+
+    .welcome-banner {
+      background: linear-gradient(135deg, rgba(79,142,247,0.1), rgba(168,85,247,0.08));
+      border: 1px solid rgba(79,142,247,0.2);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .welcome-banner .wb-icon { font-size: 40px; }
+    .welcome-banner h2 { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); }
+    .welcome-banner p { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🎬</div>
+      <h2>Quản Lý Kênh</h2>
+      <p>Hệ thống nhân sự YouTube</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Tổng Quan</div>
+      <a href="/manager/dashboard.html" class="nav-item active" id="nav-dashboard">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <div class="nav-section-label">Quản Lý</div>
+      <a href="/manager/gmails.html" class="nav-item" id="nav-gmails">
+        <span class="nav-icon">📧</span> Gmail Accounts
+      </a>
+      <a href="/manager/channels.html" class="nav-item" id="nav-channels">
+        <span class="nav-icon">📺</span> Kênh YouTube
+      </a>
+      <a href="/manager/employees.html" class="nav-item" id="nav-employees">
+        <span class="nav-icon">👥</span> Nhân Viên
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card" onclick="showChangePassword()">
+        <div class="avatar" id="sidebar-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-user-name">Admin</div>
+          <div class="user-role" id="sidebar-user-role">👔 Quản Lý</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="logout()">
+        🚪 Đăng Xuất
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main-content">
+    <header class="page-header">
+      <h1>📊 Dashboard Tổng Quan</h1>
+      <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">🔄 Làm mới</button>
+    </header>
+
+    <div class="page-body">
+      <!-- Welcome Banner -->
+      <div class="welcome-banner">
+        <div class="wb-icon">👋</div>
+        <div>
+          <h2>Xin chào, <span id="welcome-name">Quản Lý</span>!</h2>
+          <p id="welcome-date">Hôm nay là ...</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-icon">📺</div>
+          <div>
+            <div class="stat-value" id="stat-channels">—</div>
+            <div class="stat-label">Kênh YouTube</div>
+          </div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon">🎬</div>
+          <div>
+            <div class="stat-value" id="stat-videos">—</div>
+            <div class="stat-label">Video Đã Đăng</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">👥</div>
+          <div>
+            <div class="stat-value" id="stat-employees">—</div>
+            <div class="stat-label">Nhân Viên</div>
+          </div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">📧</div>
+          <div>
+            <div class="stat-value" id="stat-gmails">—</div>
+            <div class="stat-label">Gmail Accounts</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts & recent -->
+      <div class="recent-grid">
+        <!-- Top channels -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📈 Kênh Có Nhiều Video Nhất</div>
+          </div>
+          <div class="card-body">
+            <div id="top-channels-chart" class="chart-bar-wrap">
+              <div class="loading-overlay"><div class="spinner"></div> Đang tải...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent videos -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🕐 Video Được Cập Nhật Gần Đây</div>
+          </div>
+          <div class="card-body">
+            <div id="recent-videos-list">
+              <div class="loading-overlay"><div class="spinner"></div> Đang tải...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="modal-changepwd">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🔐 Đổi Mật Khẩu</div>
+      <button class="modal-close" onclick="closeModal('modal-changepwd')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Mật khẩu cũ</label>
+        <input type="password" id="old-pwd" class="form-control" placeholder="Nhập mật khẩu cũ...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu mới</label>
+        <input type="password" id="new-pwd" class="form-control" placeholder="Tối thiểu 6 ký tự...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-changepwd')">Hủy</button>
+      <button class="btn btn-primary" onclick="doChangePassword()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="/js/api.js"></script>
+<script>
+  if (!requireLogin('manager')) { /* will redirect */ }
+  renderUserInfo();
+
+  // Welcome date
+  const now = new Date();
+  document.getElementById('welcome-name').textContent = (getUser()?.full_name || 'Quản Lý');
+  document.getElementById('welcome-date').textContent =
+    'Hôm nay là ' + now.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  async function loadDashboard() {
+    try {
+      const stats = await apiGet('/videos/stats');
+
+      document.getElementById('stat-channels').textContent  = stats.total_channels;
+      document.getElementById('stat-videos').textContent    = stats.total_videos;
+      document.getElementById('stat-employees').textContent = stats.total_employees;
+      document.getElementById('stat-gmails').textContent    = stats.total_gmails;
+
+      // Top channels chart
+      const maxCount = Math.max(...stats.top_channels.map(c => c.count), 1);
+      const chartEl = document.getElementById('top-channels-chart');
+      if (stats.top_channels.length === 0) {
+        chartEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📺</div><h3>Chưa có dữ liệu</h3></div>';
+      } else {
+        chartEl.innerHTML = stats.top_channels.map(c => `
+          <div class="chart-bar-item">
+            <div class="chart-bar-label">
+              <span>${escapeHtml(truncate(c.name, 25))}</span>
+              <span>${c.count} video</span>
+            </div>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill" style="width:${Math.round(c.count/maxCount*100)}%"></div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Recent videos
+      const listEl = document.getElementById('recent-videos-list');
+      if (stats.recent_videos.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🎬</div><h3>Chưa có video nào</h3></div>';
+      } else {
+        listEl.innerHTML = stats.recent_videos.map(v => `
+          <div class="video-list-item">
+            <div class="video-num">#${v.video_number}</div>
+            <div class="video-info">
+              <div class="video-title">${escapeHtml(truncate(v.title, 35))}</div>
+              <div class="video-meta">
+                📺 ${escapeHtml(v.channel_name)} &nbsp;·&nbsp;
+                👤 ${escapeHtml(v.poster_name)} &nbsp;·&nbsp;
+                ${formatDate(v.created_at)}
+                ${v.youtube_url ? `&nbsp;·&nbsp;<a href="${escapeHtml(v.youtube_url)}" target="_blank">🔗 Xem</a>` : ''}
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } catch (err) {
+      showToast('Lỗi tải dashboard: ' + err.message, 'error');
+    }
+  }
+
+  function showChangePassword() {
+    openModal('modal-changepwd');
+  }
+
+  async function doChangePassword() {
+    const oldPwd = document.getElementById('old-pwd').value;
+    const newPwd = document.getElementById('new-pwd').value;
+    if (!oldPwd || !newPwd) { showToast('Vui lòng nhập đầy đủ', 'error'); return; }
+    try {
+      await apiPost('/auth/change-password', { old_password: oldPwd, new_password: newPwd });
+      showToast('Đổi mật khẩu thành công!', 'success');
+      closeModal('modal-changepwd');
+      document.getElementById('old-pwd').value = '';
+      document.getElementById('new-pwd').value = '';
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

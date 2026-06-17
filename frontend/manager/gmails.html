@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gmail Accounts - Quản Lý Kênh Nhân Sự</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🎬</div>
+      <h2>Quản Lý Kênh</h2>
+      <p>Hệ thống nhân sự YouTube</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Tổng Quan</div>
+      <a href="/manager/dashboard.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+      <div class="nav-section-label">Quản Lý</div>
+      <a href="/manager/gmails.html" class="nav-item active"><span class="nav-icon">📧</span> Gmail Accounts</a>
+      <a href="/manager/channels.html" class="nav-item"><span class="nav-icon">📺</span> Kênh YouTube</a>
+      <a href="/manager/employees.html" class="nav-item"><span class="nav-icon">👥</span> Nhân Viên</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="avatar" id="sidebar-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-user-name">Admin</div>
+          <div class="user-role" id="sidebar-user-role">👔 Quản Lý</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="logout()">
+        🚪 Đăng Xuất
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="page-header">
+      <h1>📧 Gmail Accounts</h1>
+      <button class="btn btn-primary" onclick="openAddModal()">➕ Thêm Gmail</button>
+    </header>
+    <div class="page-body">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Tìm email..." oninput="filterTable()">
+        </div>
+        <span id="total-count" class="badge badge-blue">0 Gmail</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Email</th>
+              <th>Tên Hiển Thị</th>
+              <th>Phụ Trách</th>
+              <th>Số Kênh</th>
+              <th>Ghi Chú</th>
+              <th>Ngày Tạo</th>
+              <th>Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="gmail-table-body">
+            <tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div> Đang tải...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="modal-gmail">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-gmail-title">➕ Thêm Gmail</div>
+      <button class="modal-close" onclick="closeModal('modal-gmail')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="form-group">
+        <label class="form-label">Email *</label>
+        <input type="email" id="f-email" class="form-control" placeholder="example@gmail.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tên Hiển Thị</label>
+        <input type="text" id="f-display" class="form-control" placeholder="VD: Gmail chính của team A...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nhân Viên Phụ Trách</label>
+        <select id="f-employee" class="form-control">
+          <option value="">-- Chưa gán --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ghi Chú</label>
+        <textarea id="f-notes" class="form-control" placeholder="Ghi chú thêm..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-gmail')">Hủy</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveGmail()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title">🗑 Xác Nhận Xóa</div>
+      <button class="modal-close" onclick="closeModal('modal-delete')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary)">Bạn có chắc muốn xóa Gmail <strong id="delete-email" style="color:var(--danger)"></strong>?</p>
+      <p style="color:var(--text-muted);font-size:0.8rem;margin-top:8px">⚠️ Tất cả kênh YouTube thuộc Gmail này cũng sẽ bị xóa.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-delete')">Hủy</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">🗑 Xóa</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="/js/api.js"></script>
+<script>
+  if (!requireLogin('manager')) {}
+  renderUserInfo();
+
+  let allGmails = [];
+  let allEmployees = [];
+  let deleteId = null;
+
+  async function initData() {
+    try {
+      allEmployees = await apiGet('/auth/users');
+      // Lọc ra nhân viên
+      allEmployees = allEmployees.filter(u => u.role === 'employee');
+      const sel = document.getElementById('f-employee');
+      allEmployees.forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = emp.id;
+        opt.textContent = emp.full_name;
+        sel.appendChild(opt);
+      });
+      await loadGmails();
+    } catch (err) {
+      showToast('Lỗi tải dữ liệu: ' + err.message, 'error');
+    }
+  }
+
+  async function loadGmails() {
+    try {
+      allGmails = await apiGet('/gmails');
+      renderTable(allGmails);
+    } catch (err) {
+      showToast('Lỗi tải danh sách Gmail: ' + err.message, 'error');
+    }
+  }
+
+  function renderTable(data) {
+    document.getElementById('total-count').textContent = `${data.length} Gmail`;
+    const tbody = document.getElementById('gmail-table-body');
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7">
+        <div class="empty-state">
+          <div class="empty-icon">📧</div>
+          <h3>Chưa có Gmail nào</h3>
+          <p>Nhấn "Thêm Gmail" để bắt đầu</p>
+        </div>
+      </td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map((g, i) => `
+      <tr>
+        <td style="color:var(--text-muted)">${i+1}</td>
+        <td><strong>${escapeHtml(g.email)}</strong></td>
+        <td>${escapeHtml(g.display_name) || '<span style="color:var(--text-muted)">—</span>'}</td>
+        <td>${g.employee_name ? `👤 ${escapeHtml(g.employee_name)}` : '<span style="color:var(--danger)">Chưa gán</span>'}</td>
+        <td><span class="badge badge-blue">📺 ${g.channel_count} kênh</span></td>
+        <td style="color:var(--text-muted)">${truncate(g.notes, 50) || '—'}</td>
+        <td style="color:var(--text-muted);font-size:0.8rem">${formatDate(g.created_at)}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="openEditModal(${g.id})" title="Sửa">✏️</button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="openDeleteModal(${g.id}, '${escapeHtml(g.email)}')" title="Xóa">🗑</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function filterTable() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    renderTable(allGmails.filter(g =>
+      g.email.toLowerCase().includes(q) ||
+      (g.display_name || '').toLowerCase().includes(q)
+    ));
+  }
+
+  function openAddModal() {
+    document.getElementById('modal-gmail-title').textContent = '➕ Thêm Gmail';
+    document.getElementById('edit-id').value = '';
+    document.getElementById('f-email').value = '';
+    document.getElementById('f-display').value = '';
+    document.getElementById('f-notes').value = '';
+    document.getElementById('f-employee').value = '';
+    document.getElementById('f-email').disabled = false;
+    document.getElementById('save-btn').textContent = '💾 Lưu';
+    openModal('modal-gmail');
+  }
+
+  function openEditModal(id) {
+    const g = allGmails.find(x => x.id === id);
+    if (!g) return;
+    document.getElementById('modal-gmail-title').textContent = '✏️ Sửa Gmail';
+    document.getElementById('edit-id').value = g.id;
+    document.getElementById('f-email').value = g.email;
+    document.getElementById('f-email').disabled = true;
+    document.getElementById('f-display').value = g.display_name;
+    document.getElementById('f-notes').value = g.notes;
+    document.getElementById('f-employee').value = g.employee_id || '';
+    document.getElementById('save-btn').textContent = '💾 Cập Nhật';
+    openModal('modal-gmail');
+  }
+
+  function openDeleteModal(id, email) {
+    deleteId = id;
+    document.getElementById('delete-email').textContent = email;
+    openModal('modal-delete');
+  }
+
+  async function saveGmail() {
+    const id = document.getElementById('edit-id').value;
+    const email = document.getElementById('f-email').value.trim();
+    const display_name = document.getElementById('f-display').value.trim();
+    const notes = document.getElementById('f-notes').value.trim();
+    const employee_id = document.getElementById('f-employee').value || null;
+
+    if (!id && !email) { showToast('Email không được để trống', 'error'); return; }
+
+    try {
+      if (id) {
+        await apiPut(`/gmails/${id}`, { display_name, notes, employee_id });
+        showToast('Đã cập nhật Gmail!', 'success');
+      } else {
+        await apiPost('/gmails', { email, display_name, notes, employee_id });
+        showToast('Đã thêm Gmail mới!', 'success');
+      }
+      closeModal('modal-gmail');
+      loadGmails();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return;
+    try {
+      await apiDelete(`/gmails/${deleteId}`);
+      showToast('Đã xóa Gmail!', 'success');
+      closeModal('modal-delete');
+      loadGmails();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  initData();
+</script>
+</body>
+</html>

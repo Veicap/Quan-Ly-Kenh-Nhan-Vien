@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Nhân Viên - Quản Lý Kênh Nhân Sự</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .emp-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Employee sidebar narrower */
+    .emp-sidebar {
+      width: 240px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+    }
+
+    .emp-main { margin-left: 240px; flex: 1; }
+
+    /* Channel list in sidebar */
+    .channel-list-sidebar { padding: 8px; flex: 1; overflow-y: auto; }
+    .ch-sidebar-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition);
+      margin-bottom: 3px;
+    }
+    .ch-sidebar-item:hover { background: var(--bg-glass); }
+    .ch-sidebar-item.active {
+      background: linear-gradient(135deg, rgba(79,142,247,0.15), rgba(168,85,247,0.1));
+      border: 1px solid rgba(79,142,247,0.2);
+    }
+    .ch-sidebar-icon { font-size: 18px; flex-shrink: 0; }
+    .ch-sidebar-name { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+    .ch-sidebar-sub { font-size: 0.7rem; color: var(--text-muted); }
+
+    /* Main content area */
+    .emp-page-body { padding: 24px 28px; }
+
+    /* Channel detail section */
+    .channel-hero {
+      background: linear-gradient(135deg, rgba(79,142,247,0.08), rgba(168,85,247,0.06));
+      border: 1px solid rgba(79,142,247,0.2);
+      border-radius: var(--radius-xl);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+    }
+
+    .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    .hero-title { font-size: 1.4rem; font-weight: 800; color: var(--text-primary); }
+    .hero-gmail { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+
+    .hero-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+    .hero-stat { text-align: center; }
+    .hero-stat .hs-val { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
+    .hero-stat .hs-lbl { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .storage-section {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+    .storage-label { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+    .storage-value {
+      flex: 1;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      word-break: break-all;
+    }
+
+    /* Quick post form */
+    .post-form-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(79,142,247,0.25);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+    }
+    .post-form-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+    }
+
+    .form-title {
+      font-size: 1rem; font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+    }
+
+    .post-form-grid {
+      display: grid;
+      grid-template-columns: 150px auto;
+      gap: 16px;
+      align-items: end;
+    }
+
+    @media (max-width: 900px) {
+      .post-form-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* Video history table */
+    .video-num-cell {
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 1rem;
+    }
+
+    /* Session section */
+    .session-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+
+    .session-status {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      margin-bottom: 16px;
+    }
+    .session-status.has-session {
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+    }
+    .session-status.no-session {
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.3);
+    }
+
+    .tab-bar {
+      display: flex; gap: 4px;
+      padding: 4px;
+      background: var(--bg-glass);
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      width: fit-content;
+    }
+    .tab-btn {
+      padding: 7px 18px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: none;
+      color: var(--text-muted);
+      transition: var(--transition);
+    }
+    .tab-btn.active {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+<div class="emp-layout">
+  <!-- Sidebar: danh sách kênh -->
+  <aside class="emp-sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🎬</div>
+      <h2>Kênh Của Tôi</h2>
+      <p id="emp-sidebar-sub">Đang tải...</p>
+    </div>
+    <div style="padding: 12px; border-bottom: 1px solid var(--border);">
+      <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="openAddChannel()">➕ Thêm Kênh Mới</button>
+    </div>
+    <div class="channel-list-sidebar" id="channel-sidebar-list">
+      <div class="loading-overlay"><div class="spinner"></div></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="avatar" id="sidebar-avatar">E</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-user-name">Nhân Viên</div>
+          <div class="user-role" id="sidebar-user-role">👷 Nhân Viên</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="logout()">🚪 Đăng Xuất</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="emp-main">
+    <header class="page-header">
+      <h1 id="page-heading">📺 Portal Nhân Viên</h1>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm" onclick="openChangePwd()">🔐 Đổi Mật Khẩu</button>
+      </div>
+    </header>
+
+    <div class="emp-page-body" id="main-body">
+      <!-- No channel selected -->
+      <div id="no-channel-view" style="text-align:center;padding:80px 20px">
+        <div style="font-size:60px;margin-bottom:20px">📺</div>
+        <h2 style="color:var(--text-secondary);margin-bottom:8px">Chọn kênh bên trái để bắt đầu</h2>
+        <p style="color:var(--text-muted)">Danh sách kênh bạn đang phụ trách hiển thị ở thanh bên</p>
+      </div>
+
+      <!-- Channel detail (hidden until channel selected) -->
+      <div id="channel-detail-view" style="display:none">
+
+        <!-- Pending Deletion Banner -->
+        <div id="pending-banner" style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;padding:14px 20px;border-radius:var(--radius-lg);margin-bottom:16px;align-items:center;gap:12px;display:none">
+          <span style="font-size:24px">⏳</span>
+          <div>
+            <div style="font-weight:700;font-size:0.95rem">Kênh đang chờ Quản lý duyệt xóa</div>
+            <div style="font-size:0.8rem;opacity:0.9;margin-top:2px">Yêu cầu đã được gửi. Vui lòng chờ Quản lý xử lý.</div>
+          </div>
+        </div>
+
+        <!-- Hero -->
+        <div class="channel-hero">
+          <div class="hero-top">
+            <div>
+              <div class="hero-title" id="detail-ch-name">Tên Kênh</div>
+              <div class="hero-gmail" id="detail-ch-gmail">📧 gmail@gmail.com</div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;" id="hero-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-edit-ch" onclick="openEditChannel()">✏️ Sửa Kênh</button>
+                <button class="btn btn-danger btn-sm" id="btn-delete-ch" onclick="requestDeleteChannel()">🗑 Xin Xóa Kênh</button>
+              </div>
+            </div>
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hs-val" id="detail-next-num">#1</div>
+                <div class="hs-lbl">STT tiếp theo</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Storage path -->
+          <div class="storage-section" id="storage-section">
+            <span class="storage-label">📁 Kho video:</span>
+            <span class="storage-value" id="detail-storage-path">Chưa có đường dẫn</span>
+            <button class="btn btn-secondary btn-sm" onclick="openEditStorage()">✏️ Cập nhật</button>
+            <button id="studio-btn" class="btn btn-primary btn-sm" onclick="">▶ YouTube Studio</button>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('post')" id="tab-post">➕ Đăng Video Mới</button>
+          <button class="tab-btn" onclick="switchTab('history')" id="tab-history">📋 Lịch Sử Video</button>
+          <button class="tab-btn" onclick="switchTab('session')" id="tab-session">🔑 Session YouTube</button>
+        </div>
+
+        <!-- Tab: Post video -->
+        <div class="tab-panel active" id="panel-post">
+          <div class="post-form-card">
+            <div class="form-title">🎬 Cập Nhật Video Vừa Đăng</div>
+            <div class="post-form-grid">
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">STT Video *</label>
+                <input type="number" id="v-num" class="form-control" min="1" placeholder="#1">
+              </div>
+              <div style="padding-bottom:1px">
+                <button class="btn btn-primary btn-lg" onclick="postVideo()" id="post-btn">
+                  📤 Ghi nhận
+                </button>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:12px;margin-bottom:0">
+              <label class="form-label">Ghi Chú (tùy chọn)</label>
+              <input type="text" id="v-notes" class="form-control" placeholder="Ghi chú thêm về video này...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: History -->
+        <div class="tab-panel" id="panel-history">
+          <div class="toolbar" style="margin-bottom:16px">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="history-search" placeholder="Tìm video..." oninput="filterHistory()">
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="loadVideos()">🔄 Làm mới</button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Ghi Chú</th>
+                  <th>Ngày Đăng</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody">
+                <tr><td colspan="6"><div class="loading-overlay"><div class="spinner"></div> Đang tải...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Session -->
+        <div class="tab-panel" id="panel-session">
+          <div class="session-box">
+            <div id="session-status-box" class="session-status no-session">
+              <span style="font-size:24px">⏳</span>
+              <div>
+                <div style="font-weight:600;color:var(--text-primary)">Đang kiểm tra session...</div>
+              </div>
+            </div>
+
+            <div style="margin-bottom:16px">
+              <p style="color:var(--text-secondary);font-size:0.875rem;line-height:1.7;margin-bottom:12px">
+                💡 <strong>Hướng dẫn lưu session YouTube:</strong><br>
+                1. Mở YouTube Studio → Đăng nhập vào tài khoản kênh này<br>
+                2. Mở DevTools (F12) → Application → Cookies → youtube.com<br>
+                3. Copy giá trị cookie <code style="background:var(--bg-glass);padding:2px 6px;border-radius:4px">__Secure-3PAPISID</code> và <code style="background:var(--bg-glass);padding:2px 6px;border-radius:4px">SAPISID</code><br>
+                4. Dán vào ô bên dưới và nhấn Lưu
+              </p>
+              <div class="form-group">
+                <label class="form-label">Dữ Liệu Session (Cookie String)</label>
+                <textarea id="session-input" class="form-control" rows="4" placeholder='Dán cookie string vào đây...'></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Ghi Chú Session</label>
+                <input type="text" id="session-note" class="form-control" placeholder="VD: Đăng nhập lúc 10/06/2024, dùng cho kênh A">
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-primary" onclick="saveSession()">💾 Lưu Session</button>
+                <button class="btn btn-danger" onclick="deleteSession()">🗑 Xóa Session</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Channel Modal -->
+<div class="modal-overlay" id="modal-channel">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-ch-title">➕ Thêm Kênh YouTube</div>
+      <button class="modal-close" onclick="closeModal('modal-channel')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ch-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Gmail *</label>
+          <select id="ch-gmail" class="form-control"><option value="">Chọn Gmail...</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tên Kênh *</label>
+          <input type="text" id="ch-name" class="form-control" placeholder="VD: Kênh Review Phim...">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Channel ID (UCxxxx)</label>
+          <input type="text" id="ch-cid" class="form-control" placeholder="UCxxxxxxxxxxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label class="form-label">URL Kênh</label>
+          <input type="text" id="ch-url" class="form-control" placeholder="https://youtube.com/channel/...">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">YouTube Studio URL</label>
+          <input type="text" id="ch-studio" class="form-control" placeholder="https://studio.youtube.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Số Thứ Tự Bắt Đầu</label>
+          <input type="number" id="ch-nextnum" class="form-control" value="1" min="1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ghi Chú</label>
+        <textarea id="ch-notes" class="form-control" placeholder="Ghi chú về kênh..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-channel')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveChannel()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Storage Modal -->
+<div class="modal-overlay" id="modal-storage">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📁 Cập Nhật Đường Dẫn Kho Video</div>
+      <button class="modal-close" onclick="closeModal('modal-storage')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px">
+        Nhập đường dẫn đến thư mục / Google Drive nơi bạn lấy video để đăng lên kênh này.
+      </p>
+      <div class="form-group">
+        <label class="form-label">Đường Dẫn Kho Video</label>
+        <input type="text" id="storage-input" class="form-control" placeholder="VD: https://drive.google.com/drive/... hoặc D:\Videos\KeinhA">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-storage')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveStorage()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Channel Modal -->
+<div class="modal-overlay" id="modal-confirm-delete">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header" style="background:linear-gradient(135deg,rgba(220,38,38,0.15),rgba(185,28,28,0.1));border-bottom:1px solid rgba(220,38,38,0.3)">
+      <div class="modal-title" style="color:#f87171">🗑️ Xác Nhận Xóa Kênh</div>
+      <button class="modal-close" onclick="closeModal('modal-confirm-delete')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align:center;padding:8px 0 16px">
+        <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+        <div style="font-size:1rem;font-weight:600;color:var(--text-primary);margin-bottom:10px">
+          Bạn muốn gửi yêu cầu xóa kênh này?
+        </div>
+        <div id="confirm-delete-ch-name" style="font-size:0.9rem;color:var(--primary);font-weight:700;margin-bottom:12px"></div>
+        <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.6">
+          Sau khi xác nhận, Quản lý sẽ nhận được thông báo.<br>
+          Nếu được duyệt, kênh sẽ bị <strong style="color:#f87171">xóa vĩnh viễn</strong>.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:center;gap:12px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-confirm-delete')" style="min-width:100px">Hủy</button>
+      <button class="btn btn-danger" id="btn-confirm-delete-ok" onclick="confirmDeleteChannel()" style="min-width:140px">🗑️ Gửi Yêu Cầu Xóa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="modal-changepwd">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title">🔐 Đổi Mật Khẩu</div>
+      <button class="modal-close" onclick="closeModal('modal-changepwd')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Mật khẩu cũ</label>
+        <input type="password" id="old-pwd" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu mới (tối thiểu 6 ký tự)</label>
+        <input type="password" id="new-pwd" class="form-control">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-changepwd')">Hủy</button>
+      <button class="btn btn-primary" onclick="doChangePwd()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="/js/api.js"></script>
+<script>
+  if (!requireLogin()) {}
+  renderUserInfo();
+
+  let myChannels = [], currentChannel = null, allVideos = [], myGmails = [];
+
+  async function init() {
+    try {
+      [myChannels, myGmails] = await Promise.all([
+        apiGet('/channels'),
+        apiGet('/gmails')
+      ]);
+      renderSidebarChannels();
+      populateGmailSelect();
+      if (myChannels.length > 0) {
+        selectChannel(myChannels[0].id);
+      }
+    } catch (err) {
+      showToast('Lỗi tải dữ liệu: ' + err.message, 'error');
+    }
+  }
+
+  function renderSidebarChannels() {
+    const list = document.getElementById('channel-sidebar-list');
+    const sub = document.getElementById('emp-sidebar-sub');
+    sub.textContent = `${myChannels.length} kênh phụ trách`;
+
+    if (myChannels.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">📺</div><h3>Chưa có kênh</h3><p>Liên hệ quản lý để được phân công</p></div>`;
+      return;
+    }
+    list.innerHTML = myChannels.map(c => `
+      <div class="ch-sidebar-item ${c.status === 'pending_deletion' ? 'ch-pending' : ''}" id="sidebar-ch-${c.id}" onclick="selectChannel(${c.id})">
+        <span class="ch-sidebar-icon">📺</span>
+        <div>
+          <div class="ch-sidebar-name">${c.status === 'pending_deletion' ? '⏳ ' : ''}${escapeHtml(c.channel_name)}</div>
+          <div class="ch-sidebar-sub">STT tiếp theo: #${c.next_video_number}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function selectChannel(id) {
+    // Update sidebar active state
+    document.querySelectorAll('.ch-sidebar-item').forEach(el => el.classList.remove('active'));
+    const sidebarEl = document.getElementById(`sidebar-ch-${id}`);
+    if (sidebarEl) sidebarEl.classList.add('active');
+
+    currentChannel = myChannels.find(c => c.id === id);
+    if (!currentChannel) return;
+
+    // Show detail view
+    document.getElementById('no-channel-view').style.display = 'none';
+    document.getElementById('channel-detail-view').style.display = 'block';
+
+    renderChannelHero();
+    await loadVideos();
+    await loadSessionStatus();
+    switchTab('post');
+  }
+
+  function renderChannelHero() {
+    const c = currentChannel;
+    document.getElementById('page-heading').textContent = `📺 ${c.channel_name}`;
+    document.getElementById('detail-ch-name').textContent = c.channel_name;
+    document.getElementById('detail-ch-gmail').textContent = `📧 ${c.gmail_email}`;
+    document.getElementById('detail-next-num').textContent = `#${c.next_video_number}`;
+    document.getElementById('detail-storage-path').textContent = c.video_storage_path || 'Chưa có đường dẫn';
+    document.getElementById('v-num').value = c.next_video_number;
+
+    const btnEdit = document.getElementById('btn-edit-ch');
+    const btnDel = document.getElementById('btn-delete-ch');
+    const banner = document.getElementById('pending-banner');
+
+    if (c.status === 'pending_deletion') {
+      banner.style.display = 'flex';
+      btnEdit.style.display = 'none';
+      btnDel.textContent = '⏳ Đang chờ duyệt xóa';
+      btnDel.disabled = true;
+      btnDel.style.opacity = '0.6';
+    } else {
+      banner.style.display = 'none';
+      btnEdit.style.display = '';
+      btnDel.textContent = '🗑 Xin Xóa Kênh';
+      btnDel.disabled = false;
+      btnDel.style.opacity = '1';
+    }
+
+    const studioBtn = document.getElementById('studio-btn');
+    studioBtn.onclick = () => openStudio(c.id);
+    studioBtn.disabled = false;
+  }
+
+  async function loadVideos() {
+    if (!currentChannel) return;
+    try {
+      const result = await apiGet(`/videos?channel_id=${currentChannel.id}&per_page=50`);
+      allVideos = result.videos;
+      renderHistoryTable(allVideos);
+    } catch (err) {
+      showToast('Lỗi tải lịch sử video: ' + err.message, 'error');
+    }
+  }
+
+  function populateGmailSelect() {
+    const sel = document.getElementById('ch-gmail');
+    sel.innerHTML = '<option value="">Chọn Gmail...</option>' + 
+      myGmails.map(g => `<option value="${g.id}">${escapeHtml(g.email)}</option>`).join('');
+  }
+
+  function openAddChannel() {
+    if (myGmails.length === 0) {
+      showToast('Bạn chưa được cấp Gmail nào để tạo kênh. Vui lòng liên hệ quản lý.', 'error');
+      return;
+    }
+    document.getElementById('modal-ch-title').textContent = '➕ Thêm Kênh YouTube';
+    document.getElementById('ch-id').value = '';
+    ['ch-name','ch-cid','ch-url','ch-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ch-studio').value = 'https://studio.youtube.com';
+    document.getElementById('ch-nextnum').value = '1';
+    document.getElementById('ch-gmail').value = '';
+    document.getElementById('ch-gmail').disabled = false;
+    openModal('modal-channel');
+  }
+
+  function openEditChannel() {
+    if (!currentChannel) return;
+    document.getElementById('modal-ch-title').textContent = '✏️ Sửa Kênh';
+    document.getElementById('ch-id').value = currentChannel.id;
+    document.getElementById('ch-name').value = currentChannel.channel_name;
+    document.getElementById('ch-cid').value = currentChannel.channel_id;
+    document.getElementById('ch-url').value = currentChannel.channel_url;
+    document.getElementById('ch-studio').value = currentChannel.studio_url;
+    document.getElementById('ch-nextnum').value = currentChannel.next_video_number;
+    document.getElementById('ch-notes').value = currentChannel.notes;
+    document.getElementById('ch-gmail').value = currentChannel.gmail_id;
+    document.getElementById('ch-gmail').disabled = true; // Prevent changing Gmail for now
+    openModal('modal-channel');
+  }
+
+  async function saveChannel() {
+    const id = document.getElementById('ch-id').value;
+    const payload = {
+      gmail_id: parseInt(document.getElementById('ch-gmail').value) || null,
+      channel_name: document.getElementById('ch-name').value.trim(),
+      channel_id: document.getElementById('ch-cid').value.trim(),
+      channel_url: document.getElementById('ch-url').value.trim(),
+      studio_url: document.getElementById('ch-studio').value.trim(),
+      next_video_number: parseInt(document.getElementById('ch-nextnum').value) || 1,
+      notes: document.getElementById('ch-notes').value.trim()
+    };
+    if (!payload.gmail_id || !payload.channel_name) {
+      showToast('Vui lòng chọn Gmail và nhập tên kênh', 'error'); return;
+    }
+    try {
+      if (id) {
+        await apiPut(`/channels/${id}`, payload);
+        showToast('Đã cập nhật kênh!', 'success');
+      } else {
+        await apiPost('/channels', payload);
+        showToast('Đã thêm kênh mới!', 'success');
+      }
+      closeModal('modal-channel');
+      myChannels = await apiGet('/channels');
+      renderSidebarChannels();
+      if (id) selectChannel(id);
+      else if (myChannels.length > 0) selectChannel(myChannels[0].id);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // Mở modal xác nhận xóa kênh (thay confirm())
+  function requestDeleteChannel() {
+    if (!currentChannel) return;
+    if (currentChannel.status === 'pending_deletion') return;
+    // Hiển thị tên kênh trong modal
+    document.getElementById('confirm-delete-ch-name').textContent = `"📺 ${currentChannel.channel_name}"`;
+    openModal('modal-confirm-delete');
+  }
+
+  // Được gọi khi nhấn OK trong modal
+  async function confirmDeleteChannel() {
+    if (!currentChannel) return;
+    const btn = document.getElementById('btn-confirm-delete-ok');
+    btn.disabled = true;
+    btn.textContent = '⏳ Đang gửi...';
+    try {
+      const res = await apiDelete(`/channels/${currentChannel.id}`);
+      closeModal('modal-confirm-delete');
+      showToast(res.message || 'Đã gửi yêu cầu xóa kênh! Quản lý sẽ duyệt sớm.', 'success', 7000);
+      myChannels = await apiGet('/channels');
+      currentChannel = myChannels.find(c => c.id === currentChannel.id) || currentChannel;
+      renderSidebarChannels();
+      renderChannelHero();
+    } catch (err) {
+      closeModal('modal-confirm-delete');
+      showToast('❌ Lỗi: ' + err.message, 'error', 6000);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🗑️ Gửi Yêu Cầu Xóa';
+    }
+  }
+
+  function renderHistoryTable(data) {
+    const tbody = document.getElementById('history-tbody');
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🎬</div><h3>Chưa có video nào</h3></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map(v => `
+      <tr>
+        <td class="video-num-cell">#${v.video_number}</td>
+        <td style="color:var(--text-muted);font-size:0.8rem">${truncate(v.notes, 40) || '—'}</td>
+        <td style="color:var(--text-muted);font-size:0.8rem;white-space:nowrap">${formatDate(v.created_at)}</td>
+        <td>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteVideo(${v.id})" title="Xóa">🗑</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function filterHistory() {
+    const q = document.getElementById('history-search').value.toLowerCase();
+    renderHistoryTable(allVideos.filter(v => v.title.toLowerCase().includes(q) || String(v.video_number).includes(q)));
+  }
+
+  async function postVideo() {
+    const num = parseInt(document.getElementById('v-num').value);
+    const notes = document.getElementById('v-notes').value.trim();
+
+    if (!num) {
+      showToast('Vui lòng nhập STT video', 'error'); return;
+    }
+
+    const btn = document.getElementById('post-btn');
+    btn.disabled = true; btn.textContent = '⏳ Đang lưu...';
+
+    try {
+      await apiPost('/videos', {
+        channel_id: currentChannel.id,
+        video_number: num,
+        notes
+      });
+      showToast(`✅ Đã ghi nhận video #${num}`, 'success');
+
+      // Clear form, update next number
+      document.getElementById('v-notes').value = '';
+
+      // Refresh channel data
+      myChannels = await apiGet('/channels');
+      currentChannel = myChannels.find(c => c.id === currentChannel.id);
+      renderChannelHero();
+      renderSidebarChannels();
+      await loadVideos();
+      switchTab('history');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '📤 Ghi nhận';
+    }
+  }
+
+  async function deleteVideo(id) {
+    if (!confirm('Xóa video này?')) return;
+    try {
+      await apiDelete(`/videos/${id}`);
+      showToast('Đã xóa video', 'success');
+      await loadVideos();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // ── Storage ───────────────────────────────────────────────
+  function openEditStorage() {
+    document.getElementById('storage-input').value = currentChannel.video_storage_path || '';
+    openModal('modal-storage');
+  }
+
+  async function saveStorage() {
+    const path = document.getElementById('storage-input').value.trim();
+    try {
+      await apiPut(`/channels/${currentChannel.id}`, { video_storage_path: path });
+      showToast('Đã cập nhật đường dẫn kho video!', 'success');
+      myChannels = await apiGet('/channels');
+      currentChannel = myChannels.find(c => c.id === currentChannel.id);
+      renderChannelHero();
+      renderSidebarChannels();
+      closeModal('modal-storage');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // ── Open Studio ───────────────────────────────────────────
+  async function openStudio(channelId) {
+    const btn = document.getElementById('studio-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Đang mở...';
+    try {
+      const result = await apiPost(`/channels/${channelId}/open-studio`, {});
+      showToast(result.message || 'Đã mở YouTube Studio!', 'success');
+    } catch (err) {
+      showToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '▶ YouTube Studio';
+    }
+  }
+
+  // ── Session ───────────────────────────────────────────────
+  async function loadSessionStatus() {
+    if (!currentChannel) return;
+    try {
+      const data = await apiGet(`/sessions/${currentChannel.id}`);
+      const box = document.getElementById('session-status-box');
+      if (data.has_session) {
+        box.className = 'session-status has-session';
+        box.innerHTML = `
+          <span style="font-size:24px">✅</span>
+          <div>
+            <div style="font-weight:600;color:var(--success)">Session đã được lưu</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px">
+              ${escapeHtml(data.session_note || '')} · Cập nhật: ${formatDate(data.updated_at)}
+            </div>
+          </div>
+        `;
+        document.getElementById('session-note').value = data.session_note || '';
+        document.getElementById('session-input').value = '';
+        document.getElementById('session-input').placeholder = '(Đã có session - dán để cập nhật lại)';
+      } else {
+        box.className = 'session-status no-session';
+        box.innerHTML = `
+          <span style="font-size:24px">⚠️</span>
+          <div>
+            <div style="font-weight:600;color:var(--warning)">Chưa có session YouTube</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px">Làm theo hướng dẫn bên dưới để lưu session</div>
+          </div>
+        `;
+      }
+    } catch {}
+  }
+
+  async function saveSession() {
+    const data = document.getElementById('session-input').value.trim();
+    const note = document.getElementById('session-note').value.trim();
+    if (!data) { showToast('Vui lòng nhập dữ liệu session', 'error'); return; }
+    try {
+      await apiPost(`/sessions/${currentChannel.id}`, { session_data: data, session_note: note });
+      showToast('Đã lưu session YouTube!', 'success');
+      await loadSessionStatus();
+      myChannels = await apiGet('/channels');
+      renderSidebarChannels();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function deleteSession() {
+    if (!confirm('Xóa session YouTube của kênh này?')) return;
+    try {
+      await apiDelete(`/sessions/${currentChannel.id}`);
+      showToast('Đã xóa session', 'success');
+      await loadSessionStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────
+  function switchTab(name) {
+    ['post','history','session'].forEach(t => {
+      document.getElementById(`tab-${t}`).classList.remove('active');
+      document.getElementById(`panel-${t}`).classList.remove('active');
+    });
+    document.getElementById(`tab-${name}`).classList.add('active');
+    document.getElementById(`panel-${name}`).classList.add('active');
+  }
+
+  // ── Change Password ───────────────────────────────────────
+  function openChangePwd() { openModal('modal-changepwd'); }
+
+  async function doChangePwd() {
+    const oldPwd = document.getElementById('old-pwd').value;
+    const newPwd = document.getElementById('new-pwd').value;
+    if (!oldPwd || !newPwd) { showToast('Vui lòng nhập đầy đủ', 'error'); return; }
+    try {
+      await apiPost('/auth/change-password', { old_password: oldPwd, new_password: newPwd });
+      showToast('Đổi mật khẩu thành công!', 'success');
+      closeModal('modal-changepwd');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

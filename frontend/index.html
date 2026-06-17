@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Nhập - Quản Lý Kênh Nhân Sự</title>
+  <meta name="description" content="Hệ thống quản lý kênh YouTube nhân sự - Đăng nhập">
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh;
+      background: var(--bg-base);
+      overflow: hidden;
+    }
+
+    /* Animated background blobs */
+    .bg-blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      animation: blobFloat 8s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .blob-1 { width: 500px; height: 500px; background: var(--primary); top: -100px; left: -100px; animation-delay: 0s; }
+    .blob-2 { width: 400px; height: 400px; background: var(--secondary); bottom: -100px; right: -100px; animation-delay: 3s; }
+    .blob-3 { width: 300px; height: 300px; background: var(--accent); top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: 6s; }
+
+    @keyframes blobFloat {
+      0%, 100% { transform: scale(1) translate(0, 0); }
+      33%       { transform: scale(1.05) translate(10px, -15px); }
+      66%       { transform: scale(0.97) translate(-8px, 10px); }
+    }
+
+    .login-wrapper {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      padding: 0 20px;
+    }
+
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 40px 36px;
+      backdrop-filter: blur(20px);
+      box-shadow: var(--shadow-lg), 0 0 60px rgba(79,142,247,0.08);
+      animation: fadeUp 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px) scale(0.95); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .login-logo .logo-box {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 20px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 30px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 30px var(--primary-glow);
+    }
+
+    .login-logo h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .login-logo p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .input-icon-wrap {
+      position: relative;
+    }
+    .input-icon-wrap .icon {
+      position: absolute;
+      left: 14px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      pointer-events: none;
+    }
+    .input-icon-wrap .form-control {
+      padding-left: 42px;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 14px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      transition: var(--transition);
+    }
+    .toggle-password:hover { color: var(--text-primary); }
+
+    .login-btn {
+      width: 100%;
+      padding: 13px;
+      font-size: 1rem;
+      justify-content: center;
+      margin-top: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .login-btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.5s ease;
+    }
+    .login-btn:hover::after { transform: translateX(100%); }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .error-msg {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      color: var(--danger);
+      margin-bottom: 16px;
+      display: none;
+    }
+    .error-msg.show { display: flex; align-items: center; gap: 8px; }
+  </style>
+</head>
+<body>
+  <!-- Background effects -->
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <div class="bg-blob blob-3"></div>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-box">🎬</div>
+        <h1>Quản Lý Kênh</h1>
+        <p>Hệ thống quản lý kênh YouTube nhân sự</p>
+      </div>
+
+      <div id="error-msg" class="error-msg">
+        <span>⚠️</span>
+        <span id="error-text"></span>
+      </div>
+
+      <form id="login-form" autocomplete="on">
+        <div class="form-group">
+          <label class="form-label" for="username">Tên đăng nhập</label>
+          <div class="input-icon-wrap">
+            <span class="icon">👤</span>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="form-control"
+              placeholder="Nhập username..."
+              autocomplete="username"
+              required
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Mật khẩu</label>
+          <div class="input-icon-wrap">
+            <span class="icon">🔒</span>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              placeholder="Nhập mật khẩu..."
+              autocomplete="current-password"
+              required
+            >
+            <button type="button" class="toggle-password" onclick="togglePwd()" id="pwd-toggle">👁</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary login-btn" id="login-btn">
+          <span id="btn-text">Đăng Nhập</span>
+          <span id="btn-spinner" class="spinner" style="display:none"></span>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        🔐 Phiên đăng nhập được lưu 30 ngày
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/config.js"></script>
+  <script src="/js/api.js"></script>
+  <script>
+    // Redirect if already logged in
+    (function() {
+      const user = getUser();
+      const token = getToken();
+      if (token && user) {
+        if (user.role === 'manager') {
+          window.location.href = '/manager/dashboard.html';
+        } else {
+          window.location.href = '/employee/portal.html';
+        }
+      }
+    })();
+
+    function togglePwd() {
+      const input = document.getElementById('password');
+      const btn = document.getElementById('pwd-toggle');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁';
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      document.getElementById('error-text').textContent = msg;
+      el.classList.add('show');
+    }
+
+    function hideError() {
+      document.getElementById('error-msg').classList.remove('show');
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        showError('Vui lòng nhập đầy đủ thông tin');
+        return;
+      }
+
+      const btn = document.getElementById('login-btn');
+      const btnText = document.getElementById('btn-text');
+      const btnSpinner = document.getElementById('btn-spinner');
+
+      btn.disabled = true;
+      btnText.textContent = 'Đang đăng nhập...';
+      btnSpinner.style.display = 'inline-block';
+
+      try {
+        const data = await apiPost('/auth/login', { username, password });
+        setToken(data.token);
+        setUser(data.user);
+
+        showToast(`Chào mừng, ${data.user.full_name || data.user.username}! 👋`, 'success');
+
+        setTimeout(() => {
+          if (data.user.role === 'manager') {
+            window.location.href = '/manager/dashboard.html';
+          } else {
+            window.location.href = '/employee/portal.html';
+          }
+        }, 800);
+      } catch (err) {
+        showError(err.message || 'Đăng nhập thất bại');
+        btn.disabled = false;
+        btnText.textContent = 'Đăng Nhập';
+        btnSpinner.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
