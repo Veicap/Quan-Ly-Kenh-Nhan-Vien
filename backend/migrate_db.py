@@ -17,7 +17,18 @@ def migrate():
         else:
             print("Error adding column:", e)
 
-    # 2. Add status to youtube_channels if it doesn't exist
+    # 2. Add password and two_fa to gmail_accounts
+    try:
+        cursor.execute("ALTER TABLE gmail_accounts ADD COLUMN password VARCHAR(255) DEFAULT ''")
+        cursor.execute("ALTER TABLE gmail_accounts ADD COLUMN two_fa VARCHAR(255) DEFAULT ''")
+        print("Added password and two_fa to gmail_accounts.")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e):
+            print("Columns password/two_fa already exist.")
+        else:
+            print("Error adding columns:", e)
+
+    # 3. Add status to youtube_channels if it doesn't exist
     try:
         cursor.execute("ALTER TABLE youtube_channels ADD COLUMN status VARCHAR(20) DEFAULT 'active'")
         print("Added status to youtube_channels.")

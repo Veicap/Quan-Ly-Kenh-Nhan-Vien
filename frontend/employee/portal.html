@@ -209,16 +209,25 @@
     <header class="page-header">
       <h1 id="page-heading">📺 Portal Nhân Viên</h1>
       <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm" onclick="showEmpGmails()">📧 Xem Gmail Của Tôi</button>
         <button class="btn btn-secondary btn-sm" onclick="openChangePwd()">🔐 Đổi Mật Khẩu</button>
       </div>
     </header>
 
     <div class="emp-page-body" id="main-body">
       <!-- No channel selected -->
-      <div id="no-channel-view" style="text-align:center;padding:80px 20px">
-        <div style="font-size:60px;margin-bottom:20px">📺</div>
-        <h2 style="color:var(--text-secondary);margin-bottom:8px">Chọn kênh bên trái để bắt đầu</h2>
-        <p style="color:var(--text-muted)">Danh sách kênh bạn đang phụ trách hiển thị ở thanh bên</p>
+      <div id="no-channel-view" style="padding:40px 20px">
+        <div style="text-align:center;">
+          <div style="font-size:60px;margin-bottom:20px">📺</div>
+          <h2 style="color:var(--text-secondary);margin-bottom:8px">Chọn kênh bên trái để bắt đầu</h2>
+          <p style="color:var(--text-muted)">Danh sách kênh bạn đang phụ trách hiển thị ở thanh bên</p>
+        </div>
+        
+        <div id="emp-gmails-section" style="margin-top: 40px; display: none; background: var(--bg-card); border-radius: var(--radius-lg); padding: 24px; border: 1px solid var(--border);">
+          <h3 style="margin-bottom: 16px; color: var(--text-primary);">📧 Các Gmail Được Phân Công</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">Bạn có thể sử dụng các Gmail này để đăng nhập và tạo kênh YouTube mới.</p>
+          <div id="emp-gmails-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        </div>
       </div>
 
       <!-- Channel detail (hidden until channel selected) -->
@@ -239,6 +248,7 @@
             <div>
               <div class="hero-title" id="detail-ch-name">Tên Kênh</div>
               <div class="hero-gmail" id="detail-ch-gmail">📧 gmail@gmail.com</div>
+              <div class="hero-gmail" id="detail-ch-pwd" style="display:none; margin-top: 6px; color: var(--text-secondary); font-size: 0.85rem;"></div>
               <div style="margin-top: 12px; display: flex; gap: 8px;" id="hero-actions">
                 <button class="btn btn-secondary btn-sm" id="btn-edit-ch" onclick="openEditChannel()">✏️ Sửa Kênh</button>
                 <button class="btn btn-danger btn-sm" id="btn-delete-ch" onclick="requestDeleteChannel()">🗑 Xin Xóa Kênh</button>
@@ -498,10 +508,71 @@
       populateGmailSelect();
       if (myChannels.length > 0) {
         selectChannel(myChannels[0].id);
+      } else {
+        renderEmpGmails();
       }
     } catch (err) {
       showToast('Lỗi tải dữ liệu: ' + err.message, 'error');
     }
+  }
+
+  function renderEmpGmails() {
+    const section = document.getElementById('emp-gmails-section');
+    const list = document.getElementById('emp-gmails-list');
+    if (myGmails.length > 0) {
+      section.style.display = 'block';
+      list.innerHTML = myGmails.map(g => `
+        <div style="background: var(--bg-surface); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
+              📧 ${escapeHtml(g.email)}
+              <button class="btn btn-sm" style="padding: 2px 6px; margin-left: 8px; font-size: 0.7rem; background: var(--bg-glass); border: 1px solid var(--border); color: #fbbf24;" onclick="copyGmailField(${g.id}, 'email')">📋 Copy</button>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <span>🔑 <b>Mật khẩu:</b> ${escapeHtml(g.password || '—')}</span>
+              <button class="btn btn-sm" style="padding: 2px 6px; margin-right: 8px; font-size: 0.7rem; background: var(--bg-glass); border: 1px solid var(--border); color: #fbbf24;" onclick="copyGmailField(${g.id}, 'password')">📋 Copy</button>
+              
+              <span>🛡️ <b>Mã 2FA:</b> ${escapeHtml(g.two_fa || '—')}</span>
+              <button class="btn btn-sm" style="padding: 2px 6px; font-size: 0.7rem; background: var(--bg-glass); border: 1px solid var(--border); color: #fbbf24;" onclick="copyGmailField(${g.id}, 'two_fa')">📋 Copy</button>
+            </div>
+            ${g.notes ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">📝 Ghi chú: ${escapeHtml(g.notes)}</div>` : ''}
+          </div>
+          <div>
+             <button class="btn btn-secondary btn-sm" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.3);" onclick="copyAllGmailInfo(${g.id})">📋 Copy Tất Cả</button>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      section.style.display = 'none';
+    }
+  }
+
+  function copyGmailField(id, field) {
+    const g = myGmails.find(x => x.id === id);
+    if (!g) return;
+    let text = g[field] || '';
+    if (!text) return showToast('Không có dữ liệu để copy', 'error');
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Đã copy!', 'success', 2000);
+    }).catch(err => showToast('Lỗi copy', 'error'));
+  }
+
+  function copyAllGmailInfo(id) {
+    const g = myGmails.find(x => x.id === id);
+    if (!g) return;
+    const text = `Email: ${g.email}\nMật khẩu: ${g.password || ''}\n2FA: ${g.two_fa || ''}`;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Đã copy toàn bộ thông tin!', 'success', 2000);
+    }).catch(err => showToast('Lỗi copy', 'error'));
+  }
+
+  function showEmpGmails() {
+    document.querySelectorAll('.ch-sidebar-item').forEach(el => el.classList.remove('active'));
+    currentChannel = null;
+    document.getElementById('page-heading').textContent = '📺 Portal Nhân Viên';
+    document.getElementById('channel-detail-view').style.display = 'none';
+    document.getElementById('no-channel-view').style.display = 'block';
+    renderEmpGmails();
   }
 
   function renderSidebarChannels() {
@@ -548,6 +619,24 @@
     document.getElementById('page-heading').textContent = `📺 ${c.channel_name}`;
     document.getElementById('detail-ch-name').textContent = c.channel_name;
     document.getElementById('detail-ch-gmail').textContent = `📧 ${c.gmail_email}`;
+    
+    const gmail = myGmails.find(g => g.email === c.gmail_email);
+    const pwdEl = document.getElementById('detail-ch-pwd');
+    if (gmail && (gmail.password || gmail.two_fa)) {
+      pwdEl.innerHTML = `
+        <div style="display:inline-flex; align-items:center; flex-wrap:wrap; gap: 8px;">
+          🔑 <b>Mật khẩu:</b> ${escapeHtml(gmail.password || '—')} 
+          <button class="btn btn-sm" style="padding: 2px 6px; font-size: 0.7rem; background: var(--bg-glass); border: 1px solid var(--border); color: #fbbf24;" onclick="copyGmailField(${gmail.id}, 'password')">📋</button>
+          &nbsp;|&nbsp; 
+          🛡️ <b>Mã 2FA:</b> ${escapeHtml(gmail.two_fa || '—')}
+          <button class="btn btn-sm" style="padding: 2px 6px; font-size: 0.7rem; background: var(--bg-glass); border: 1px solid var(--border); color: #fbbf24;" onclick="copyGmailField(${gmail.id}, 'two_fa')">📋</button>
+        </div>
+      `;
+      pwdEl.style.display = 'block';
+    } else {
+      pwdEl.style.display = 'none';
+    }
+
     document.getElementById('detail-next-num').textContent = `#${c.next_video_number}`;
     document.getElementById('detail-storage-path').textContent = c.video_storage_path || 'Chưa có đường dẫn';
     document.getElementById('v-num').value = c.next_video_number;

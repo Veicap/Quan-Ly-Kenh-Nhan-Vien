@@ -21,6 +21,8 @@ def list_gmails():
 def create_gmail():
     data = request.get_json() or {}
     email = data.get('email', '').strip().lower()
+    password = data.get('password', '').strip()
+    two_fa = data.get('two_fa', '').strip()
     display_name = data.get('display_name', '').strip()
     notes = data.get('notes', '').strip()
 
@@ -29,7 +31,7 @@ def create_gmail():
     if GmailAccount.query.filter_by(email=email).first():
         return jsonify({'error': 'Email đã tồn tại trong hệ thống'}), 409
 
-    gmail = GmailAccount(email=email, display_name=display_name, notes=notes)
+    gmail = GmailAccount(email=email, password=password, two_fa=two_fa, display_name=display_name, notes=notes)
     db.session.add(gmail)
     db.session.commit()
     return jsonify(gmail.to_dict()), 201
@@ -56,6 +58,10 @@ def update_gmail(gid):
         gmail.email = new_email
     if 'display_name' in data:
         gmail.display_name = data['display_name'].strip()
+    if 'password' in data:
+        gmail.password = data['password'].strip()
+    if 'two_fa' in data:
+        gmail.two_fa = data['two_fa'].strip()
     if 'notes' in data:
         gmail.notes = data['notes'].strip()
     if 'employee_id' in data:

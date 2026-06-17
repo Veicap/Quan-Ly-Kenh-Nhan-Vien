@@ -55,8 +55,10 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>Email</th>
               <th>Tên Hiển Thị</th>
+              <th>Email</th>
+              <th>Mật Khẩu</th>
+              <th>Mã 2FA</th>
               <th>Phụ Trách</th>
               <th>Số Kênh</th>
               <th>Ghi Chú</th>
@@ -85,6 +87,14 @@
       <div class="form-group">
         <label class="form-label">Email *</label>
         <input type="email" id="f-email" class="form-control" placeholder="example@gmail.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật Khẩu</label>
+        <input type="text" id="f-password" class="form-control" placeholder="Mật khẩu email...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mã 2FA</label>
+        <input type="text" id="f-two-fa" class="form-control" placeholder="Mã khôi phục hoặc 2FA...">
       </div>
       <div class="form-group">
         <label class="form-label">Tên Hiển Thị</label>
@@ -167,7 +177,7 @@
     document.getElementById('total-count').textContent = `${data.length} Gmail`;
     const tbody = document.getElementById('gmail-table-body');
     if (data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7">
+      tbody.innerHTML = `<tr><td colspan="9">
         <div class="empty-state">
           <div class="empty-icon">📧</div>
           <h3>Chưa có Gmail nào</h3>
@@ -179,8 +189,10 @@
     tbody.innerHTML = data.map((g, i) => `
       <tr>
         <td style="color:var(--text-muted)">${i+1}</td>
-        <td><strong>${escapeHtml(g.email)}</strong></td>
-        <td>${escapeHtml(g.display_name) || '<span style="color:var(--text-muted)">—</span>'}</td>
+        <td><strong>${escapeHtml(g.display_name) || '<span style="color:var(--text-muted)">—</span>'}</strong></td>
+        <td>${escapeHtml(g.email)}</td>
+        <td style="color:var(--text-secondary)">${escapeHtml(g.password || '—')}</td>
+        <td style="color:var(--text-secondary)">${escapeHtml(g.two_fa || '—')}</td>
         <td>${g.employee_name ? `👤 ${escapeHtml(g.employee_name)}` : '<span style="color:var(--danger)">Chưa gán</span>'}</td>
         <td><span class="badge badge-blue">📺 ${g.channel_count} kênh</span></td>
         <td style="color:var(--text-muted)">${truncate(g.notes, 50) || '—'}</td>
@@ -207,6 +219,8 @@
     document.getElementById('modal-gmail-title').textContent = '➕ Thêm Gmail';
     document.getElementById('edit-id').value = '';
     document.getElementById('f-email').value = '';
+    document.getElementById('f-password').value = '';
+    document.getElementById('f-two-fa').value = '';
     document.getElementById('f-display').value = '';
     document.getElementById('f-notes').value = '';
     document.getElementById('f-employee').value = '';
@@ -222,6 +236,8 @@
     document.getElementById('edit-id').value = g.id;
     document.getElementById('f-email').value = g.email;
     document.getElementById('f-email').disabled = true;
+    document.getElementById('f-password').value = g.password || '';
+    document.getElementById('f-two-fa').value = g.two_fa || '';
     document.getElementById('f-display').value = g.display_name;
     document.getElementById('f-notes').value = g.notes;
     document.getElementById('f-employee').value = g.employee_id || '';
@@ -238,6 +254,8 @@
   async function saveGmail() {
     const id = document.getElementById('edit-id').value;
     const email = document.getElementById('f-email').value.trim();
+    const password = document.getElementById('f-password').value.trim();
+    const two_fa = document.getElementById('f-two-fa').value.trim();
     const display_name = document.getElementById('f-display').value.trim();
     const notes = document.getElementById('f-notes').value.trim();
     const employee_id = document.getElementById('f-employee').value || null;
@@ -246,10 +264,10 @@
 
     try {
       if (id) {
-        await apiPut(`/gmails/${id}`, { display_name, notes, employee_id });
+        await apiPut(`/gmails/${id}`, { display_name, password, two_fa, notes, employee_id });
         showToast('Đã cập nhật Gmail!', 'success');
       } else {
-        await apiPost('/gmails', { email, display_name, notes, employee_id });
+        await apiPost('/gmails', { email, password, two_fa, display_name, notes, employee_id });
         showToast('Đã thêm Gmail mới!', 'success');
       }
       closeModal('modal-gmail');

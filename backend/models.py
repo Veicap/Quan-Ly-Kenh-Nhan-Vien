@@ -31,6 +31,8 @@ class GmailAccount(db.Model):
     __tablename__ = 'gmail_accounts'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
+    password = db.Column(db.String(255), default='')
+    two_fa = db.Column(db.String(255), default='')
     display_name = db.Column(db.String(120), default='')
     notes = db.Column(db.Text, default='')
     employee_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
@@ -43,6 +45,8 @@ class GmailAccount(db.Model):
         return {
             'id': self.id,
             'email': self.email,
+            'password': self.password,
+            'two_fa': self.two_fa,
             'display_name': self.display_name,
             'notes': self.notes,
             'employee_id': self.employee_id,
