@@ -525,8 +525,8 @@
         <div style="background: var(--bg-surface); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
-              📧 ${escapeHtml(g.email)}
-              <button class="btn btn-sm" style="padding: 2px 6px; margin-left: 8px; font-size: 0.7rem; background: var(--bg-glass); border: 1px solid var(--border); color: #fbbf24;" onclick="copyGmailField(${g.id}, 'email')">📋 Copy</button>
+              📧 ${escapeHtml(g.display_name ? g.display_name + ' (' + g.email + ')' : g.email)}
+              <button class="btn btn-sm" style="padding: 2px 6px; margin-left: 8px; font-size: 0.7rem; background: var(--bg-glass); border: 1px solid var(--border); color: #fbbf24;" onclick="copyGmailField(${g.id}, 'email')">📋 Copy Email</button>
             </div>
             <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
               <span>🔑 <b>Mật khẩu:</b> ${escapeHtml(g.password || '—')}</span>
@@ -618,9 +618,10 @@
     const c = currentChannel;
     document.getElementById('page-heading').textContent = `📺 ${c.channel_name}`;
     document.getElementById('detail-ch-name').textContent = c.channel_name;
-    document.getElementById('detail-ch-gmail').textContent = `📧 ${c.gmail_email}`;
-    
     const gmail = myGmails.find(g => g.email === c.gmail_email);
+    const displayNameStr = gmail && gmail.display_name ? ` - Tên hiển thị: ${escapeHtml(gmail.display_name)}` : '';
+    document.getElementById('detail-ch-gmail').textContent = `📧 ${c.gmail_email}${displayNameStr}`;
+    
     const pwdEl = document.getElementById('detail-ch-pwd');
     if (gmail && (gmail.password || gmail.two_fa)) {
       pwdEl.innerHTML = `
