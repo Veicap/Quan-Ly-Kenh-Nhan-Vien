@@ -45,33 +45,39 @@ def get_gmail(gid):
 
 
 @gmail_bp.route('/<int:gid>', methods=['PUT'])
-@require_manager
+@require_auth
 def update_gmail(gid):
+    user = request.current_user
     gmail = GmailAccount.query.get_or_404(gid)
     data = request.get_json() or {}
 
-    if 'email' in data:
-        new_email = data['email'].strip().lower()
-        existing = GmailAccount.query.filter_by(email=new_email).first()
-        if existing and existing.id != gid:
-            return jsonify({'error': 'Email đã tồn tại'}), 409
-        gmail.email = new_email
-    if 'display_name' in data:
-        gmail.display_name = data['display_name'].strip()
+    if user.role != 'manager' and gmail.employee_id != user.id:
+        return jsonify({'error': 'Không có quyền'}), 403
+
+    if user.role == 'manager':
+        if 'email' in data:
+            new_email = data['email'].strip().lower()
+            existing = GmailAccount.query.filter_by(email=new_email).first()
+            if existing and existing.id != gid:
+                return jsonify({'error': 'Email đã tồn tại'}), 409
+            gmail.email = new_email
+        if 'display_name' in data:
+            gmail.display_name = data['display_name'].strip()
+        if 'employee_id' in data:
+            emp_id = data['employee_id']
+            if emp_id:
+                from models import User
+                emp = User.query.get(emp_id)
+                if not emp or emp.role != 'employee':
+                    return jsonify({'error': 'Nhân viên không hợp lệ'}), 400
+            gmail.employee_id = emp_id or None
+
     if 'password' in data:
         gmail.password = data['password'].strip()
     if 'two_fa' in data:
         gmail.two_fa = data['two_fa'].strip()
     if 'notes' in data:
         gmail.notes = data['notes'].strip()
-    if 'employee_id' in data:
-        emp_id = data['employee_id']
-        if emp_id:
-            from models import User
-            emp = User.query.get(emp_id)
-            if not emp or emp.role != 'employee':
-                return jsonify({'error': 'Nhân viên không hợp lệ'}), 400
-        gmail.employee_id = emp_id or None
 
     db.session.commit()
     return jsonify(gmail.to_dict())

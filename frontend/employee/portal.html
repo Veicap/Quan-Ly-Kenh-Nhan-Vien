@@ -175,6 +175,47 @@
 
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
+
+    /* Affiliate section */
+    .affiliate-card {
+      background: linear-gradient(135deg, rgba(251,191,36,0.08), rgba(245,158,11,0.05));
+      border: 1px solid rgba(251,191,36,0.3);
+      border-radius: var(--radius-lg);
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .affiliate-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+    .affiliate-title {
+      font-size: 0.9rem; font-weight: 700;
+      color: #fbbf24;
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .affiliate-channel-name {
+      font-size: 1rem; font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      background: rgba(251,191,36,0.08);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid #f59e0b;
+    }
+    .affiliate-link-display {
+      font-size: 0.82rem;
+      color: var(--primary);
+      word-break: break-all;
+      padding: 6px 10px;
+      background: var(--bg-glass);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -269,6 +310,15 @@
             <button class="btn btn-secondary btn-sm" onclick="openEditStorage()">✏️ Cập nhật</button>
             <button id="studio-btn" class="btn btn-primary btn-sm" onclick="">▶ YouTube Studio</button>
           </div>
+        </div>
+
+        <!-- Affiliate Channel Section (danh sách nhiều kênh cộng sự) -->
+        <div id="affiliate-section" style="display:none" class="affiliate-card">
+          <div class="affiliate-title">🤝 Kênh Cộng Sự</div>
+          <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:14px">
+            Nhập link mời cộng sự của bạn cho từng kênh bên dưới. Mỗi kênh có link riêng biệt.
+          </p>
+          <div id="aff-items-container" style="display:flex;flex-direction:column;gap:10px"></div>
         </div>
 
         <!-- Tabs -->
@@ -490,6 +540,35 @@
   </div>
 </div>
 
+<!-- Edit Gmail Modal -->
+<div class="modal-overlay" id="modal-edit-gmail">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Cập Nhật Gmail</div>
+      <button class="modal-close" onclick="closeModal('modal-edit-gmail')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="eg-id">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="text" id="eg-email" class="form-control" disabled>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu mới</label>
+        <input type="text" id="eg-pwd" class="form-control" placeholder="Để trống nếu không đổi">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mã 2FA mới</label>
+        <input type="text" id="eg-twofa" class="form-control" placeholder="Để trống nếu không đổi">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-gmail')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveEditGmail()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/config.js"></script>
 <script src="/js/api.js"></script>
 <script>
@@ -537,8 +616,9 @@
             </div>
             ${g.notes ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">📝 Ghi chú: ${escapeHtml(g.notes)}</div>` : ''}
           </div>
-          <div>
+          <div style="display: flex; gap: 8px;">
              <button class="btn btn-secondary btn-sm" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.3);" onclick="copyAllGmailInfo(${g.id})">📋 Copy Tất Cả</button>
+             <button class="btn btn-secondary btn-sm" onclick="openEditGmail(${g.id})">✏️ Cập Nhật</button>
           </div>
         </div>
       `).join('');
@@ -580,19 +660,20 @@
     const sub = document.getElementById('emp-sidebar-sub');
     sub.textContent = `${myChannels.length} kênh phụ trách`;
 
+    // Render channels
     if (myChannels.length === 0) {
       list.innerHTML = `<div class="empty-state"><div class="empty-icon">📺</div><h3>Chưa có kênh</h3><p>Liên hệ quản lý để được phân công</p></div>`;
-      return;
-    }
-    list.innerHTML = myChannels.map(c => `
-      <div class="ch-sidebar-item ${c.status === 'pending_deletion' ? 'ch-pending' : ''}" id="sidebar-ch-${c.id}" onclick="selectChannel(${c.id})">
-        <span class="ch-sidebar-icon">📺</span>
-        <div>
-          <div class="ch-sidebar-name">${c.status === 'pending_deletion' ? '⏳ ' : ''}${escapeHtml(c.channel_name)}</div>
-          <div class="ch-sidebar-sub">STT tiếp theo: #${c.next_video_number}</div>
+    } else {
+      list.innerHTML = myChannels.map(c => `
+        <div class="ch-sidebar-item ${c.status === 'pending_deletion' ? 'ch-pending' : ''}" id="sidebar-ch-${c.id}" onclick="selectChannel(${c.id})">
+          <span class="ch-sidebar-icon">📺</span>
+          <div>
+            <div class="ch-sidebar-name">${c.status === 'pending_deletion' ? '⏳ ' : ''}${escapeHtml(c.channel_name)}</div>
+            <div class="ch-sidebar-sub">STT tiếp theo: #${c.next_video_number}</div>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('');
+    }
   }
 
   async function selectChannel(id) {
@@ -641,6 +722,15 @@
     document.getElementById('detail-next-num').textContent = `#${c.next_video_number}`;
     document.getElementById('detail-storage-path').textContent = c.video_storage_path || 'Chưa có đường dẫn';
     document.getElementById('v-num').value = c.next_video_number;
+
+    // Affiliate section — danh sách nhiều kênh cộng sự
+    const affSection = document.getElementById('affiliate-section');
+    if (c.affiliates && c.affiliates.length > 0) {
+      affSection.style.display = 'block';
+      renderAffiliateItems(c.affiliates);
+    } else {
+      affSection.style.display = 'none';
+    }
 
     const btnEdit = document.getElementById('btn-edit-ch');
     const btnDel = document.getElementById('btn-delete-ch');
@@ -867,6 +957,53 @@
     }
   }
 
+  // ── Affiliate Links (Nhiều kênh) ─────────────────────────
+  function renderAffiliateItems(affiliates) {
+    const container = document.getElementById('aff-items-container');
+    container.innerHTML = affiliates.map(a => `
+      <div style="background:var(--bg-surface);border:1px solid rgba(251,191,36,0.2);border-radius:var(--radius-md);padding:12px 14px">
+        <div style="font-weight:700;color:#fbbf24;font-size:0.88rem;margin-bottom:8px">${escapeHtml(a.name)}</div>
+        ${a.link ? `
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <a href="${escapeHtml(a.link)}" target="_blank" style="color:var(--primary);font-size:0.78rem;word-break:break-all;flex:1;min-width:0">🔗 ${escapeHtml(a.link)}</a>
+            <button onclick="copyAffLink('${escapeHtml(a.link)}',this)" style="padding:2px 7px;font-size:0.75rem;background:var(--bg-glass);border:1px solid rgba(251,191,36,0.4);color:#fbbf24;border-radius:4px;cursor:pointer;flex-shrink:0">📋</button>
+          </div>
+        ` : `<div style="font-size:0.76rem;color:var(--text-muted);font-style:italic;margin-bottom:8px">Chưa có link mời</div>`}
+        <div style="display:flex;gap:6px">
+          <input type="text" id="aff-input-${a.id}" class="form-control" value="${escapeHtml(a.link || '')}" placeholder="Nhập link mời cộng sự..." style="flex:1;font-size:0.82rem">
+          <button id="btn-aff-save-${a.id}" onclick="saveOneAffiliateLink(${a.id},this)" style="padding:5px 10px;font-size:0.78rem;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:white;border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0">💾 Lưu</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function saveOneAffiliateLink(affId, btn) {
+    const input = document.getElementById(`aff-input-${affId}`);
+    const link = input.value.trim();
+    btn.disabled = true; btn.textContent = '⏳';
+    try {
+      await apiPut(`/channels/${currentChannel.id}/affiliates/${affId}`, { link });
+      showToast('✅ Đã lưu link!', 'success', 3000);
+      // Reload channel để cập nhật lại affiliates
+      myChannels = await apiGet('/channels');
+      currentChannel = myChannels.find(c => c.id === currentChannel.id);
+      renderChannelHero();
+    } catch (err) {
+      showToast('❌ Lỗi: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '💾 Lưu';
+    }
+  }
+
+  function copyAffLink(link, btn) {
+    navigator.clipboard.writeText(link).then(() => {
+      showToast('✅ Đã copy link!', 'success', 2000);
+      btn.textContent = '✅'; btn.style.color = '#10b981';
+      setTimeout(() => { btn.textContent = '📋'; btn.style.color = '#fbbf24'; }, 1500);
+    }).catch(() => showToast('Không copy được', 'error'));
+  }
+
+
   // ── Open Studio ───────────────────────────────────────────
   async function openStudio(channelId) {
     const btn = document.getElementById('studio-btn');
@@ -963,6 +1100,40 @@
       await apiPost('/auth/change-password', { old_password: oldPwd, new_password: newPwd });
       showToast('Đổi mật khẩu thành công!', 'success');
       closeModal('modal-changepwd');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // ── Edit Gmail ─────────────────────────────────────────────
+  function openEditGmail(id) {
+    const g = myGmails.find(x => x.id === id);
+    if (!g) return;
+    document.getElementById('eg-id').value = g.id;
+    document.getElementById('eg-email').value = g.email;
+    document.getElementById('eg-pwd').value = g.password || '';
+    document.getElementById('eg-twofa').value = g.two_fa || '';
+    openModal('modal-edit-gmail');
+  }
+
+  async function saveEditGmail() {
+    const id = document.getElementById('eg-id').value;
+    const pwd = document.getElementById('eg-pwd').value.trim();
+    const twofa = document.getElementById('eg-twofa').value.trim();
+    
+    try {
+      await apiPut(`/gmails/${id}`, { password: pwd, two_fa: twofa });
+      showToast('Đã cập nhật Gmail!', 'success');
+      closeModal('modal-edit-gmail');
+      
+      // Reload gmails
+      myGmails = await apiGet('/gmails');
+      renderEmpGmails();
+      
+      // Also update hero if the updated gmail is the current channel's gmail
+      if (currentChannel && currentChannel.gmail_email === document.getElementById('eg-email').value) {
+        renderChannelHero();
+      }
     } catch (err) {
       showToast(err.message, 'error');
     }

@@ -38,6 +38,25 @@ def migrate():
         else:
             print("Error adding column status:", e)
 
+    # 4. Add affiliate columns to youtube_channels
+    try:
+        cursor.execute("ALTER TABLE youtube_channels ADD COLUMN affiliate_channel_name VARCHAR(200) DEFAULT ''")
+        print("Added affiliate_channel_name to youtube_channels.")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e):
+            print("Column affiliate_channel_name already exists.")
+        else:
+            print("Error adding column affiliate_channel_name:", e)
+
+    try:
+        cursor.execute("ALTER TABLE youtube_channels ADD COLUMN affiliate_link VARCHAR(500) DEFAULT ''")
+        print("Added affiliate_link to youtube_channels.")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e):
+            print("Column affiliate_link already exists.")
+        else:
+            print("Error adding column affiliate_link:", e)
+
     # 3. Create system_notifications table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS system_notifications (
@@ -50,6 +69,18 @@ def migrate():
     )
     """)
     print("Checked system_notifications table.")
+
+    # 5. Create affiliate_channels table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS affiliate_channels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        youtube_channel_id INTEGER NOT NULL REFERENCES youtube_channels(id),
+        name VARCHAR(200) NOT NULL,
+        link VARCHAR(500) DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    print("Checked affiliate_channels table.")
 
     conn.commit()
     conn.close()

@@ -71,6 +71,8 @@ class YouTubeChannel(db.Model):
     notes = db.Column(db.Text, default='')
     is_active = db.Column(db.Boolean, default=True)
     status = db.Column(db.String(50), default='active')       # 'active', 'pending_deletion'
+    affiliate_channel_name = db.Column(db.String(200), default='')  # Tên kênh cộng sự (manager nhập)
+    affiliate_link = db.Column(db.String(500), default='')          # Link liên kết cộng sự (nhân viên nhập)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -78,6 +80,7 @@ class YouTubeChannel(db.Model):
     assigned_employee = db.relationship('User', back_populates='channels', foreign_keys=[employee_id])
     videos = db.relationship('VideoRecord', back_populates='channel', cascade='all, delete-orphan')
     yt_session = db.relationship('YouTubeSession', back_populates='channel', uselist=False, cascade='all, delete-orphan')
+    affiliates = db.relationship('AffiliateChannel', back_populates='channel', cascade='all, delete-orphan', order_by='AffiliateChannel.created_at')
 
     def to_dict(self, include_session=False):
         d = {
@@ -96,12 +99,35 @@ class YouTubeChannel(db.Model):
             'notes': self.notes,
             'is_active': self.is_active,
             'status': self.status,
+            'affiliate_channel_name': self.affiliate_channel_name or '',
+            'affiliate_link': self.affiliate_link or '',
+            'affiliates': [a.to_dict() for a in self.affiliates],
             'video_count': len(self.videos),
             'has_session': self.yt_session is not None,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
         return d
+
+
+class AffiliateChannel(db.Model):
+    __tablename__ = 'affiliate_channels'
+    id = db.Column(db.Integer, primary_key=True)
+    youtube_channel_id = db.Column(db.Integer, db.ForeignKey('youtube_channels.id'), nullable=False)
+    name = db.Column(db.String(200), nullable=False)   # Tên kênh cộng sự (manager nhập)
+    link = db.Column(db.String(500), default='')        # Link mời cộng sự (nhân viên nhập)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    channel = db.relationship('YouTubeChannel', back_populates='affiliates')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'youtube_channel_id': self.youtube_channel_id,
+            'name': self.name,
+            'link': self.link or '',
+            'created_at': self.created_at.isoformat()
+        }
 
 
 class VideoRecord(db.Model):

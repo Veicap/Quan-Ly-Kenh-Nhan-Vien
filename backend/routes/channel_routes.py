@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import db, YouTubeChannel, GmailAccount, User
+from models import db, YouTubeChannel, GmailAccount, User, AffiliateChannel
 from auth import require_auth, require_manager
 
 channel_bp = Blueprint('channel', __name__)
@@ -106,6 +106,8 @@ def update_channel(cid):
             if emp_id and not User.query.get(emp_id):
                 return jsonify({'error': 'Nhân viên không tồn tại'}), 404
             channel.employee_id = emp_id or None
+        if 'affiliate_channel_name' in data:
+            channel.affiliate_channel_name = data['affiliate_channel_name'].strip()
     else:
         # Nhân viên có thể sửa thông tin kênh của mình (trừ gmail_id, is_active, employee_id, status)
         if channel.employee_id != user.id:
@@ -125,6 +127,8 @@ def update_channel(cid):
             channel.notes = data['notes'].strip()
         if 'video_storage_path' in data:
             channel.video_storage_path = data['video_storage_path'].strip()
+        if 'affiliate_link' in data:
+            channel.affiliate_link = data['affiliate_link'].strip()
 
     from datetime import datetime
     channel.updated_at = datetime.utcnow()
@@ -256,4 +260,62 @@ def reset_profile(cid):
         return jsonify({'error': 'Không có quyền'}), 403
 
     return jsonify(reset_channel_profile(cid))
+
+
+# ═══════════════════════════════════════════════════════════
+#  AFFILIATE CHANNELS
+# ═══════════════════════════════════════════════════════════
+
+@channel_bp.route('/<int:cid>/affiliates', methods=['GET'])
+@require_auth
+def list_affiliates(cid):
+    """Lấy danh sách kênh cộng sự của 1 kênh YouTube."""
+    channel = YouTubeChannel.query.get_or_404(cid)
+    user = request.current_user
+    if user.role != 'manager' and channel.employee_id != user.id:
+        return jsonify({'error': 'Không có quyền'}), 403
+    return jsonify([a.to_dict() for a in channel.affiliates])
+
+
+@channel_bp.route('/<int:cid>/affiliates', methods=['POST'])
+@require_manager
+def create_affiliate(cid):
+    """Manager tạo 1 kênh cộng sự mới (chỉ cần tên)."""
+    channel = YouTubeChannel.query.get_or_404(cid)
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'error': 'Thiếu tên kênh cộng sự'}), 400
+    aff = AffiliateChannel(youtube_channel_id=cid, name=name)
+    db.session.add(aff)
+    db.session.commit()
+    return jsonify(aff.to_dict()), 201
+
+
+@channel_bp.route('/<int:cid>/affiliates/<int:aid>', methods=['PUT'])
+@require_auth
+def update_affiliate(cid, aid):
+    """Nhân viên nhập/cập nhật link mời cộng sự. Manager cũng có thể đổi tên."""
+    channel = YouTubeChannel.query.get_or_404(cid)
+    user = request.current_user
+    if user.role != 'manager' and channel.employee_id != user.id:
+        return jsonify({'error': 'Không có quyền'}), 403
+    aff = AffiliateChannel.query.filter_by(id=aid, youtube_channel_id=cid).first_or_404()
+    data = request.get_json() or {}
+    if user.role == 'manager' and 'name' in data:
+        aff.name = data['name'].strip()
+    if 'link' in data:
+        aff.link = data['link'].strip()
+    db.session.commit()
+    return jsonify(aff.to_dict())
+
+
+@channel_bp.route('/<int:cid>/affiliates/<int:aid>', methods=['DELETE'])
+@require_manager
+def delete_affiliate(cid, aid):
+    """Manager xóa 1 kênh cộng sự."""
+    aff = AffiliateChannel.query.filter_by(id=aid, youtube_channel_id=cid).first_or_404()
+    db.session.delete(aff)
+    db.session.commit()
+    return jsonify({'message': 'Đã xóa kênh cộng sự'})
 
