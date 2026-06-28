@@ -82,6 +82,16 @@ def migrate():
     """)
     print("Checked affiliate_channels table.")
 
+    # 6. Add is_monetized to youtube_channels
+    try:
+        cursor.execute("ALTER TABLE youtube_channels ADD COLUMN is_monetized BOOLEAN DEFAULT 0")
+        print("Added is_monetized to youtube_channels.")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e):
+            print("Column is_monetized already exists.")
+        else:
+            print("Error adding column is_monetized:", e)
+
     conn.commit()
     conn.close()
 

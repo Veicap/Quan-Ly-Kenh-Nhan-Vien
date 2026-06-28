@@ -290,6 +290,14 @@
               <div class="hero-title" id="detail-ch-name">Tên Kênh</div>
               <div class="hero-gmail" id="detail-ch-gmail">📧 gmail@gmail.com</div>
               <div class="hero-gmail" id="detail-ch-pwd" style="display:none; margin-top: 6px; color: var(--text-secondary); font-size: 0.85rem;"></div>
+              <div id="detail-ch-id-row" style="display:none; margin-top: 8px; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span style="font-size:0.78rem;color:var(--text-muted)">🆔 Channel ID:</span>
+                <code id="detail-ch-id" style="font-size:0.8rem;color:var(--text-secondary);background:var(--bg-glass);padding:2px 8px;border-radius:4px;border:1px solid var(--border)"></code>
+                <button id="btn-copy-ch-id" onclick="copyChannelId()" style="padding:1px 8px;font-size:0.72rem;background:var(--bg-glass);border:1px solid var(--border);color:var(--text-muted);border-radius:4px;cursor:pointer">📋 Copy</button>
+              </div>
+              <div id="detail-monetized-row" style="margin-top: 8px; display:none; align-items:center; gap:6px;">
+                <span id="detail-monetized-badge"></span>
+              </div>
               <div style="margin-top: 12px; display: flex; gap: 8px;" id="hero-actions">
                 <button class="btn btn-secondary btn-sm" id="btn-edit-ch" onclick="openEditChannel()">✏️ Sửa Kênh</button>
                 <button class="btn btn-danger btn-sm" id="btn-delete-ch" onclick="requestDeleteChannel()">🗑 Xin Xóa Kênh</button>
@@ -646,6 +654,15 @@
     }).catch(err => showToast('Lỗi copy', 'error'));
   }
 
+  function copyChannelId() {
+    if (!currentChannel || !currentChannel.channel_id) return;
+    navigator.clipboard.writeText(currentChannel.channel_id).then(() => {
+      showToast('✅ Đã copy Channel ID!', 'success', 2000);
+      const btn = document.getElementById('btn-copy-ch-id');
+      if (btn) { const prev = btn.textContent; btn.textContent = '✅'; setTimeout(() => btn.textContent = prev, 1500); }
+    }).catch(() => showToast('Không copy được', 'error'));
+  }
+
   function showEmpGmails() {
     document.querySelectorAll('.ch-sidebar-item').forEach(el => el.classList.remove('active'));
     currentChannel = null;
@@ -722,6 +739,26 @@
     document.getElementById('detail-next-num').textContent = `#${c.next_video_number}`;
     document.getElementById('detail-storage-path').textContent = c.video_storage_path || 'Chưa có đường dẫn';
     document.getElementById('v-num').value = c.next_video_number;
+
+    // Channel ID row
+    const chIdRow = document.getElementById('detail-ch-id-row');
+    const chIdEl = document.getElementById('detail-ch-id');
+    if (c.channel_id) {
+      chIdEl.textContent = c.channel_id;
+      chIdRow.style.display = 'flex';
+    } else {
+      chIdRow.style.display = 'none';
+    }
+
+    // Monetization badge (chỉ hiển thị, không toggle)
+    const monRow = document.getElementById('detail-monetized-row');
+    const monBadge = document.getElementById('detail-monetized-badge');
+    monRow.style.display = 'flex';
+    if (c.is_monetized) {
+      monBadge.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;background:linear-gradient(135deg,rgba(16,185,129,0.18),rgba(5,150,105,0.12));border:1px solid rgba(16,185,129,0.4);color:#10b981">💰 Đã bật kiếm tiền</span>`;
+    } else {
+      monBadge.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;background:var(--bg-glass);border:1px solid var(--border);color:var(--text-muted)">🔒 Chưa bật kiếm tiền</span>`;
+    }
 
     // Affiliate section — danh sách nhiều kênh cộng sự
     const affSection = document.getElementById('affiliate-section');

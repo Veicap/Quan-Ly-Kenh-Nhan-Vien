@@ -70,6 +70,7 @@ class YouTubeChannel(db.Model):
     next_video_number = db.Column(db.Integer, default=1)      # Số thứ tự video tiếp theo
     notes = db.Column(db.Text, default='')
     is_active = db.Column(db.Boolean, default=True)
+    is_monetized = db.Column(db.Boolean, default=False)       # Trạng thái kiếm tiền YouTube
     status = db.Column(db.String(50), default='active')       # 'active', 'pending_deletion'
     affiliate_channel_name = db.Column(db.String(200), default='')  # Tên kênh cộng sự (manager nhập)
     affiliate_link = db.Column(db.String(500), default='')          # Link liên kết cộng sự (nhân viên nhập)
@@ -98,6 +99,7 @@ class YouTubeChannel(db.Model):
             'next_video_number': self.next_video_number,
             'notes': self.notes,
             'is_active': self.is_active,
+            'is_monetized': self.is_monetized,
             'status': self.status,
             'affiliate_channel_name': self.affiliate_channel_name or '',
             'affiliate_link': self.affiliate_link or '',

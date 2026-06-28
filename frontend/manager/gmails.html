@@ -53,16 +53,16 @@
       <div class="table-wrapper">
         <table>
           <thead>
-            <tr>
-              <th>#</th>
-              <th>Tên Hiển Thị</th>
-              <th>Email</th>
+          <tr>
+              <th style="cursor:pointer;user-select:none" onclick="sortTable('index')"># <span id="sort-icon-index"></span></th>
+              <th style="cursor:pointer;user-select:none" onclick="sortTable('display_name')">Tên Hiển Thị <span id="sort-icon-display_name">▲</span></th>
+              <th style="cursor:pointer;user-select:none" onclick="sortTable('email')">Email <span id="sort-icon-email"></span></th>
               <th>Mật Khẩu</th>
               <th>Mã 2FA</th>
-              <th>Phụ Trách</th>
-              <th>Số Kênh</th>
+              <th style="cursor:pointer;user-select:none" onclick="sortTable('employee_name')">Phụ Trách <span id="sort-icon-employee_name"></span></th>
+              <th style="cursor:pointer;user-select:none" onclick="sortTable('channel_count')">Số Kênh <span id="sort-icon-channel_count"></span></th>
               <th>Ghi Chú</th>
-              <th>Ngày Tạo</th>
+              <th style="cursor:pointer;user-select:none" onclick="sortTable('created_at')">Ngày Tạo <span id="sort-icon-created_at"></span></th>
               <th>Thao Tác</th>
             </tr>
           </thead>
@@ -145,6 +145,7 @@
   let allGmails = [];
   let allEmployees = [];
   let deleteId = null;
+  let sortCol = 'display_name', sortAsc = true;
 
   async function initData() {
     try {
@@ -186,7 +187,7 @@
       </td></tr>`;
       return;
     }
-    tbody.innerHTML = data.map((g, i) => `
+    tbody.innerHTML = getSortedData(data).map((g, i) => `
       <tr>
         <td style="color:var(--text-muted)">${i+1}</td>
         <td><strong>${escapeHtml(g.display_name) || '<span style="color:var(--text-muted)">—</span>'}</strong></td>
@@ -209,10 +210,58 @@
 
   function filterTable() {
     const q = document.getElementById('search-input').value.toLowerCase();
-    renderTable(allGmails.filter(g =>
+    const filtered = allGmails.filter(g =>
       g.email.toLowerCase().includes(q) ||
       (g.display_name || '').toLowerCase().includes(q)
-    ));
+    );
+    renderTable(filtered);
+  }
+
+  function sortTable(col) {
+    if (sortCol === col) {
+      sortAsc = !sortAsc;
+    } else {
+      sortCol = col;
+      sortAsc = true;
+    }
+    // Reset all icons
+    ['index','display_name','email','employee_name','channel_count','created_at'].forEach(c => {
+      const el = document.getElementById('sort-icon-' + c);
+      if (el) el.textContent = '';
+    });
+    // Set active icon
+    const activeEl = document.getElementById('sort-icon-' + col);
+    if (activeEl) activeEl.textContent = sortAsc ? '▲' : '▼';
+
+    // Re-render with current filter
+    filterTable();
+  }
+
+  function getSortedData(data) {
+    return [...data].sort((a, b) => {
+      let av, bv;
+      if (sortCol === 'display_name') {
+        av = (a.display_name || '').toLowerCase();
+        bv = (b.display_name || '').toLowerCase();
+      } else if (sortCol === 'email') {
+        av = a.email.toLowerCase();
+        bv = b.email.toLowerCase();
+      } else if (sortCol === 'employee_name') {
+        av = (a.employee_name || '').toLowerCase();
+        bv = (b.employee_name || '').toLowerCase();
+      } else if (sortCol === 'channel_count') {
+        av = a.channel_count;
+        bv = b.channel_count;
+      } else if (sortCol === 'created_at') {
+        av = a.created_at;
+        bv = b.created_at;
+      } else {
+        return 0;
+      }
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ? 1 : -1;
+      return 0;
+    });
   }
 
   function openAddModal() {

@@ -71,6 +71,9 @@ def update_gmail(gid):
                 if not emp or emp.role != 'employee':
                     return jsonify({'error': 'Nhân viên không hợp lệ'}), 400
             gmail.employee_id = emp_id or None
+            # Đồng bộ employee_id xuống tất cả kênh YouTube của Gmail này
+            for ch in gmail.channels:
+                ch.employee_id = gmail.employee_id
 
     if 'password' in data:
         gmail.password = data['password'].strip()

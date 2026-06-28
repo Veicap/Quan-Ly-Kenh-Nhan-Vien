@@ -71,6 +71,21 @@
     .affiliate-name { font-weight: 700; color: #fbbf24; }
     .affiliate-link-val { color: var(--primary); font-size: 0.78rem; word-break: break-all; }
     .affiliate-link-empty { color: var(--text-muted); font-size: 0.78rem; font-style: italic; }
+    .badge-monetized {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+      background: linear-gradient(135deg, rgba(16,185,129,0.18), rgba(5,150,105,0.12));
+      border: 1px solid rgba(16,185,129,0.4); color: #10b981;
+      cursor: pointer; transition: var(--transition); user-select: none;
+    }
+    .badge-monetized:hover { background: rgba(16,185,129,0.28); }
+    .badge-not-monetized {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+      background: var(--bg-glass); border: 1px solid var(--border); color: var(--text-muted);
+      cursor: pointer; transition: var(--transition); user-select: none;
+    }
+    .badge-not-monetized:hover { border-color: rgba(16,185,129,0.4); color: #10b981; }
   </style>
 </head>
 <body>
@@ -118,6 +133,11 @@
         <select id="filter-emp" class="form-control" style="width:auto;min-width:180px" onchange="filterChannels()">
           <option value="">Tất cả nhân viên</option>
           <option value="unassigned">Chưa phân công</option>
+        </select>
+        <select id="filter-monetized" class="form-control" style="width:auto;min-width:180px" onchange="filterChannels()">
+          <option value="">💰 Tất cả trạng thái</option>
+          <option value="1">✅ Đã bật kiếm tiền</option>
+          <option value="0">🔒 Chưa kiếm tiền</option>
         </select>
         <span id="total-count" class="badge badge-blue">0 kênh</span>
       </div>
@@ -288,13 +308,26 @@
     const q = document.getElementById('search-input').value.toLowerCase();
     const gmailF = document.getElementById('filter-gmail').value;
     const empF = document.getElementById('filter-emp').value;
+    const monF = document.getElementById('filter-monetized').value;
     let filtered = allChannels.filter(c => {
-      const matchQ = c.channel_name.toLowerCase().includes(q) || (c.gmail_email||'').toLowerCase().includes(q);
+      const matchQ = c.channel_name.toLowerCase().includes(q)
+        || (c.gmail_email||'').toLowerCase().includes(q)
+        || (c.channel_id||'').toLowerCase().includes(q);
       const matchGmail = !gmailF || String(c.gmail_id) === gmailF;
       const matchEmp = !empF || (empF === 'unassigned' ? !c.employee_id : String(c.employee_id) === empF);
-      return matchQ && matchGmail && matchEmp;
+      const matchMon = monF === '' || (monF === '1' ? c.is_monetized : !c.is_monetized);
+      return matchQ && matchGmail && matchEmp && matchMon;
     });
     renderChannels(filtered);
+  }
+
+  async function toggleMonetized(cid, isMonetized) {
+    try {
+      await apiPut(`/channels/${cid}`, { is_monetized: isMonetized });
+      allChannels = allChannels.map(c => c.id === cid ? {...c, is_monetized: isMonetized} : c);
+      filterChannels();
+      showToast(isMonetized ? '💰 Đã bật kiếm tiền!' : '🔒 Đã tắt kiếm tiền!', 'success', 3000);
+    } catch(e) { showToast('Lỗi: ' + e.message, 'error'); }
   }
 
   function renderChannels(data) {
@@ -324,6 +357,13 @@
         </div>
         ${c.status === 'pending_deletion' ? '<div style="background:var(--danger);color:white;padding:4px 8px;font-size:0.8rem;text-align:center;font-weight:bold;">⚠️ Đang chờ duyệt xóa</div>' : ''}
         <div class="channel-meta" style="margin-top:12px">
+          <div class="channel-meta-row" style="justify-content:space-between;align-items:center">
+            <div style="display:flex;align-items:center;gap:8px">
+              ${c.is_monetized
+                ? `<span class="badge-monetized" onclick="toggleMonetized(${c.id}, false)" title="Đang bật kiếm tiền — Nhấn để tắt" style="cursor:pointer">💰 Đã kiếm tiền</span>`
+                : `<span class="badge-not-monetized" onclick="toggleMonetized(${c.id}, true)" title="Chưa bật kiếm tiền — Nhấn để bật" style="cursor:pointer">🔒 Chưa kiếm tiền</span>`}
+            </div>
+          </div>
           <div class="channel-meta-row">
             <span class="label">👤 Nhân viên:</span>
             ${c.employee_name
@@ -334,6 +374,13 @@
             <span class="label">🎬 Video:</span>
             <span class="badge badge-blue">${c.video_count} video</span>
             <span style="color:var(--text-muted);font-size:0.78rem;margin-left:4px">STT tiếp: #${c.next_video_number}</span>
+          </div>
+          <div class="channel-meta-row">
+            <span class="label">🆔 Channel ID:</span>
+            ${c.channel_id
+              ? `<span style="font-family:monospace;font-size:0.8rem;color:var(--text-secondary);background:var(--bg-glass);padding:2px 7px;border-radius:4px;border:1px solid var(--border)">${escapeHtml(c.channel_id)}</span>
+                 <button onclick="navigator.clipboard.writeText('${escapeHtml(c.channel_id)}').then(()=>showToast('Đã copy Channel ID!','success',2000))" title="Copy Channel ID" style="padding:1px 6px;font-size:0.7rem;background:var(--bg-glass);border:1px solid var(--border);color:var(--text-muted);border-radius:4px;cursor:pointer">📋</button>`
+              : `<span style="color:var(--text-muted);font-size:0.82rem;font-style:italic">Chưa có</span>`}
           </div>
           <div class="channel-meta-row">
             <span class="label">🔗 Link kênh:</span>

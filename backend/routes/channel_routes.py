@@ -12,8 +12,16 @@ def list_channels():
     if user.role == 'manager':
         channels = YouTubeChannel.query.order_by(YouTubeChannel.created_at.desc()).all()
     else:
-        # Nhân viên xem tất cả kênh của họ (kể cả active và pending_deletion)
-        channels = YouTubeChannel.query.filter_by(employee_id=user.id).order_by(YouTubeChannel.created_at.desc()).all()
+        # Nhân viên thấy kênh nếu:
+        # - channel.employee_id == user.id (phân công trực tiếp), HOẶC
+        # - channel.gmail.employee_id == user.id (kênh nằm trên Gmail được phân cho nhân viên này)
+        from sqlalchemy import or_
+        channels = YouTubeChannel.query.join(GmailAccount).filter(
+            or_(
+                YouTubeChannel.employee_id == user.id,
+                GmailAccount.employee_id == user.id
+            )
+        ).order_by(YouTubeChannel.created_at.desc()).all()
     return jsonify([c.to_dict() for c in channels])
 
 
@@ -35,7 +43,12 @@ def create_channel():
     if user.role != 'manager' and gmail.employee_id != user.id:
         return jsonify({'error': 'Bạn không được phân công Gmail này'}), 403
 
-    emp_id = data.get('employee_id') if user.role == 'manager' else user.id
+    emp_id = None
+    if user.role == 'manager':
+        # Nếu manager không điền employee_id → tự kế thừa từ Gmail
+        emp_id = data.get('employee_id') or gmail.employee_id
+    else:
+        emp_id = user.id
 
     channel = YouTubeChannel(
         gmail_id=gmail_id,
@@ -46,6 +59,7 @@ def create_channel():
         video_storage_path=data.get('video_storage_path', '').strip(),
         next_video_number=int(data.get('next_video_number', 1)),
         notes=data.get('notes', '').strip(),
+        is_monetized=bool(data.get('is_monetized', False)),
         employee_id=emp_id or None
     )
     db.session.add(channel)
@@ -101,6 +115,8 @@ def update_channel(cid):
             channel.notes = data['notes'].strip()
         if 'is_active' in data:
             channel.is_active = bool(data['is_active'])
+        if 'is_monetized' in data:
+            channel.is_monetized = bool(data['is_monetized'])
         if 'employee_id' in data:
             emp_id = data['employee_id']
             if emp_id and not User.query.get(emp_id):
@@ -127,6 +143,8 @@ def update_channel(cid):
             channel.notes = data['notes'].strip()
         if 'video_storage_path' in data:
             channel.video_storage_path = data['video_storage_path'].strip()
+        if 'is_monetized' in data:
+            channel.is_monetized = bool(data['is_monetized'])
         if 'affiliate_link' in data:
             channel.affiliate_link = data['affiliate_link'].strip()
 
